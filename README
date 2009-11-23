@@ -18,7 +18,7 @@ Usage
 Create an initial export of your current resources into .po files. You 
 will only need to do this once when converting to gettext:
 
-    ./a2po export --initial 
+    ./a2po --initial export 
     
 After modifying the Android resource files, merge your changes into 
 the existing .po files:
@@ -35,13 +35,13 @@ within your Android project directory (identified by an
 ``AndroidManifest.xml`` file), and that your resources are located inside
 ``./res``. Alternatively, you may specify your resource directory manually:
 
-    ./a2po COMMAND --android ../my-resources
+    ./a2po --android ../my-resources COMMAND
 
 You gettext files (.po and .mo) are by default stored within ``./locale``
 inside your project directory. If you disagree, you may specify the 
 directory manually:
 
-    ./a2po COMMAND --gettext ../my-translations
+    ./a2po --gettext ../my-translations COMMAND
 
 Notes
 -----
