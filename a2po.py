@@ -47,14 +47,20 @@ def export(default_file, languages, output_dir, options):
         # TODO: create gettext dir if necessary here
         # seems like we will have to do this ourselves (matching up 
         # android xml name= strings).
+        # Be sure not to override existing files.
         print "--initial mode currently not yet supported."
         return 1
         
     else:
-        print ""   # Improves formatting 
+        print ""   # Improves formatting
         for code, filename in languages.items():
+            po_file = path.join(output_dir, "%s.po" % code)
+            if not path.exists(po_file):
+                print "Warning: Skipping %s, .po file doesn't exist. Use --initial." % code
+                continue
+            
             xml2po = make_xml2po('update', '-')
-            xml2po.update([default_file], path.join(output_dir, "%s.po" % code))
+            xml2po.update([default_file], po_file)
 
 
 def import_(default_file, languages, output_dir, options):
