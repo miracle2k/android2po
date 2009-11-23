@@ -9,6 +9,7 @@ Author: Michael Elsdörfer <michael@elsdoerfer.com>
 Licensed under BSD.
 
 TODO: Add support for --verbosity, --quiet options.
+TODO: Use the -l option?
 """
 
 import os, sys
@@ -25,6 +26,7 @@ xml2po_options = {
     'expand_all_entities' : False,
 }
 
+
 class UnsupportedOptionsError(Exception):
     pass
 
@@ -32,7 +34,7 @@ class UnsupportedOptionsError(Exception):
 LANG_DIR = re.compile(r'^values(?:-(\w\w))?$')
 
 
-def make_xml2po(operation, output):
+def make_xml2po(operation, output='-'):
     return xml2po.Main('basic', operation, output, xml2po_options)
 
 
@@ -43,6 +45,11 @@ def export(default_file, languages, output_dir, options):
     if options:
         raise UnsupportedOptionsError()
         
+    # Update the template file in either case
+    print "Generating template.pot"
+    xml2po = make_xml2po('pot', path.join(output_dir, 'template.pot'))
+    xml2po.to_pot([default_file])
+
     if initial:
         # TODO: create gettext dir if necessary here
         # seems like we will have to do this ourselves (matching up 
@@ -56,10 +63,11 @@ def export(default_file, languages, output_dir, options):
         for code, filename in languages.items():
             po_file = path.join(output_dir, "%s.po" % code)
             if not path.exists(po_file):
-                print "Warning: Skipping %s, .po file doesn't exist. Use --initial." % code
+                print ("Warning: Skipping %s, .po file doesn't exist. "
+                       "Use --initial.") % code
                 continue
             
-            xml2po = make_xml2po('update', '-')
+            xml2po = make_xml2po('update')
             xml2po.update([default_file], po_file)
 
 
