@@ -4,14 +4,15 @@ android2po
 Convert Android string resources to gettext .po files, and import them 
 right back.
 
+
 Requirements
 ------------
 
 Requires ``xml2po`` from gnome-doc-utils, but in a recent version that may 
 be imported as a module (available since: 
     http://git.gnome.org/cgit/gnome-doc-utils/commit/?id=72b4feeda4bceab3ab1cd82758cfff024df721b0)
-        
-        
+
+
 Usage
 -----
 
@@ -46,6 +47,7 @@ inside your project directory. If you disagree, you may specify the
 directory manually:
 
     ./a2po --gettext ../my-translations COMMAND
+
 
 Notes
 -----
