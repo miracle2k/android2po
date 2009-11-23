@@ -42,6 +42,10 @@ within your Android project directory (identified by an
 
     ./a2po --android ../my-resources COMMAND
 
+``android2po`` will always run for every language it finds in your resource
+directory, which is to say for any ``values-xx/strings.xml`` file it can 
+find.
+
 You gettext files (.po and .mo) are by default stored within ``./locale``
 inside your project directory. If you disagree, you may specify the 
 directory manually:
