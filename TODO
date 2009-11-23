@@ -1,0 +1,4 @@
+Support "values-en-rUS-finger"-style resource directories.
+
+Set the msgctxt of each message to Android resource name, essentially 
+allowing duplicate strings (which currently aren't supported).

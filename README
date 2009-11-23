@@ -1,0 +1,53 @@
+android2po
+==========
+
+Convert Android string resources to gettext .po files, and import them 
+right back.
+
+Requirements
+------------
+
+Requires ``xml2po`` from gnome-doc-utils, but in a recent version that may 
+be imported as a module (available since: 
+    http://git.gnome.org/cgit/gnome-doc-utils/commit/?id=72b4feeda4bceab3ab1cd82758cfff024df721b0)
+        
+        
+Usage
+-----
+
+Create an initial export of your current resources into .po files. You 
+will only need to do this once when converting to gettext:
+
+    ./a2po export --initial 
+    
+After modifying the Android resource files, merge your changes into 
+the existing .po files:
+
+    ./a2po export
+    
+Once your .po files are translated, load the translations from your .mo 
+files into your Android ``strings.xml`` files.
+
+    ./a2po import
+
+The above commands will assume that your current working directory is
+within your Android project directory (identified by an 
+``AndroidManifest.xml`` file), and that your resources are located inside
+``./res``. Alternatively, you may specify your resource directory manually:
+
+    ./a2po COMMAND --android ../my-resources
+
+You gettext files (.po and .mo) are by default stored within ``./locale``
+inside your project directory. If you disagree, you may specify the 
+directory manually:
+
+    ./a2po COMMAND --gettext ../my-translations
+
+Notes
+-----
+
+Initially based on:
+    http://code.google.com/p/openintents/source/browse/tools/Androidxml2po/androidxml2po.bash
+    
+polib might potentially be helpful in the future:
+    http://code.google.com/p/polib/
