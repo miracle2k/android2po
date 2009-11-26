@@ -12,6 +12,9 @@ Requires ``xml2po`` from gnome-doc-utils, but in a recent version that may
 be imported as a module (available since: 
     http://git.gnome.org/cgit/gnome-doc-utils/commit/?id=72b4feeda4bceab3ab1cd82758cfff024df721b0)
 
+``polib`` is required if you want to export existing Android translations
+into a gettext catalog (the ``export --initial`` mode).
+    http://code.google.com/p/polib/
 
 Usage
 -----
@@ -58,6 +61,3 @@ Notes
 
 Initially based on:
     http://code.google.com/p/openintents/source/browse/tools/Androidxml2po/androidxml2po.bash
-    
-polib might potentially be helpful in the future:
-    http://code.google.com/p/polib/
