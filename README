@@ -61,3 +61,5 @@ Notes
 
 Initially based on:
     http://code.google.com/p/openintents/source/browse/tools/Androidxml2po/androidxml2po.bash
+
+Rather than polib, consider using babel (which also supports contexts).
