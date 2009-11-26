@@ -10,6 +10,8 @@ Licensed under BSD.
 
 TODO: Add support for --verbosity, --quiet options.
 TODO: Use the -l option?
+TODO: --initial mode could potentially use the xml2po "reuse" mode,
+      which kind of seems to be what we want.
 """
 
 import os, sys
@@ -19,6 +21,7 @@ import re
 import getopt
 from xml.dom import minidom
 import xml2po
+from xml2po.modes import basic
 
 
 # Same as the xml2po script uses by default.
@@ -32,6 +35,10 @@ xml2po_options = {
 class UnsupportedOptionsError(Exception):
     pass
 
+
+class AndroidMode(basic.basicXmlMode):
+    def getFinalTags(self):
+        return ['string']
 
 LANG_DIR = re.compile(r'^values(?:-(\w\w))?$')
 
@@ -58,6 +65,9 @@ def export(default_file, languages, output_dir, options):
     template_pot_file = path.join(output_dir, 'template.pot')
     xml2po = make_xml2po('pot', template_pot_file)
     xml2po.to_pot([default_file])
+    # xml2po doesn't do this; if we don't, we risk our shutil.copy
+    # only copying an incomplete file.
+    xml2po.out.flush()
 
     if initial:
         try:
@@ -66,6 +76,9 @@ def export(default_file, languages, output_dir, options):
             print "Error: polib (http://code.google.com/p/polib/) required " \
                   "to use --initial."
             return 1
+        else:
+            # See polib #22
+            polib.unescape = lambda st: st.decode('string_escape')
 
         default_xml = load_xml_strings(default_file)
         default_xml = dict((v,k) for k, v in default_xml.iteritems())
@@ -96,7 +109,6 @@ def export(default_file, languages, output_dir, options):
                 count_strings = count_trans = 0
                 for entry in po:
                     count_strings += 1
-
                     if not entry.msgid in default_xml:
                         print "Error: Cannot find resource name for \"%s...\", skipping." % \
                             entry.msgid.replace('\n', '\\n').replace('\r', '\\r')[:30]
@@ -153,7 +165,9 @@ def import_(default_file, languages, output_dir, options):
 
 
 def make_xml2po(operation, output='-'):
-    return xml2po.Main('basic', operation, output, xml2po_options)
+    result = xml2po.Main('basic', operation, output, xml2po_options)
+    result.current_mode = AndroidMode()
+    return result
 
 
 def load_xml_strings(filename, normfunc=None):
@@ -167,7 +181,10 @@ def load_xml_strings(filename, normfunc=None):
         name = tag.attributes['name'].nodeValue
         if name in result:
             print "Error: %s contains duplicate string names: %s" % (filename, name)
-        result[name] = "".join([n.toxml() for n in tag.childNodes])
+        # TODO: This is the perfect example of why having two different
+        # xml readers (xml2po and us) sucks - the replace() and strip calls
+        # attempt to recreate what xml2po gives us.
+        result[name] = "".join([n.toxml().replace('\n', ' ') for n in tag.childNodes]).strip()
         if normfunc:
             result[name] = normfunc(result[name])
     return result
