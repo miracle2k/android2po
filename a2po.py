@@ -10,10 +10,6 @@ Licensed under BSD.
 
 TODO: Use a better options parser.
 TODO: Use the -l option?
-XXX: Babel, same as polib, seems to have a much to simplified unescape(),
-which breaks \n inside pofile; we either need to provide our own unescape,
-or we could chose to instead convert \n sequences to actual linebreaks for
-use in the .po file.
 TODO: Instead of using minidom, maybe add a dependency on lxml.
 """
 
@@ -42,7 +38,19 @@ def _load_xml_strings(file):
         if name in result:
             print "Error: %s contains duplicate string names: %s" % (filename, name)
             continue
-        result[name] = "".join([n.toxml() for n in tag.childNodes]).strip()
+        value = "".join([n.toxml() for n in tag.childNodes]).strip()
+        # Android requires us to specify linebreaks in resources as "\n".
+        # However, writing that into the .po a) breaks babel
+        # (http://babel.edgewall.org/ticket/198), and b) doesn't seem
+        # to be the best solution anyway. Instead, what we do is:
+        #    * We ignore all *actual* linebreaks, since they are
+        #      meaningless in Android anyway.
+        #    * We replace all \n sequences with actual linebreaks.
+        # On import, we reverse the effect.
+        # TODO: We currently don't seem to be decoding stuff like &amp;
+        # at this point.
+        value.replace('\n', '').replace(r'\n', '\n')
+        result[name] = value
     return result
 
 
@@ -101,7 +109,9 @@ def po2xml(catalog):
             continue
         string_el = doc.createElement('string')
         string_el.setAttribute('name', message.context)
-        text_el = doc.createTextNode(message.string)
+        # With respect to the replacing we do, see the sibling call in
+        # _load_xml_strings().
+        text_el = doc.createTextNode(message.string.replace('\n', r'\n'))
         string_el.appendChild(text_el)
         root.appendChild(string_el)
     return doc
