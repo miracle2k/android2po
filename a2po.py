@@ -8,47 +8,156 @@ Author: Michael Elsdörfer <michael@elsdoerfer.com>
 
 Licensed under BSD.
 
-TODO: Add support for --verbosity, --quiet options.
+TODO: Use a better options parser.
 TODO: Use the -l option?
-TODO: --initial mode could potentially use the xml2po "reuse" mode,
-      which kind of seems to be what we want.
+XXX: Babel, same as polib, seems to have a much to simplified unescape(),
+which breaks \n inside pofile; we either need to provide our own unescape,
+or we could chose to instead convert \n sequences to actual linebreaks for
+use in the .po file.
+TODO: Instead of using minidom, maybe add a dependency on lxml.
 """
 
 import os, sys
-import shutil
 from os import path
 import re
 import getopt
+import codecs
 from xml.dom import minidom
-import xml2po
-from xml2po.modes import basic
-
-
-# Same as the xml2po script uses by default.
-xml2po_options = {
-    'mark_untranslated'   : False,
-    'expand_entities'     : True,
-    'expand_all_entities' : False,
-}
+from babel.messages import pofile, Catalog
 
 
 class UnsupportedOptionsError(Exception):
     pass
 
 
-class AndroidMode(basic.basicXmlMode):
-    def getFinalTags(self):
-        return ['string']
+def _load_xml_strings(file):
+    """Load all resource names from an Android strings.xml resource file.
+    """
+    result = {}
+    doc = minidom.parse(file)
+    for tag in doc.documentElement.getElementsByTagName('string'):
+        if not tag.attributes.has_key('name'):
+            continue
+        name = tag.attributes['name'].nodeValue
+        if name in result:
+            print "Error: %s contains duplicate string names: %s" % (filename, name)
+            continue
+        result[name] = "".join([n.toxml() for n in tag.childNodes]).strip()
+    return result
 
-LANG_DIR = re.compile(r'^values(?:-(\w\w))?$')
+
+def xml2po(file, translations=None):
+    """Return the Android string resource in ``file`` as a babel
+    .po catalog.
+
+    If given, the Android string resource in ``translations`` will be
+    used for the translated values. In this case, the returned value
+    is a 2-tuple (catalog, unmatched), with the latter being a list of
+    Android string resource names that are in the translated file, but
+    not in the original.
+    """
+    original_strings = _load_xml_strings(file)
+    trans_strings = _load_xml_strings(translations) if translations else None
+
+    catalog = Catalog()
+    for name, org_value in original_strings.iteritems():
+        trans_value = u""
+        if trans_strings:
+            trans_value = trans_strings.pop(name, trans_value)
+
+        catalog.add(org_value, trans_value, context=name)
+        # Would it be too much to ask for add() to return the message?
+        # TODO: Bring this back when we can ensure it won't be added
+        # during export/update() either.
+        #catalog.get(org_value, context=name).flags.discard('python-format')
+
+    if trans_strings is not None:
+        # At this point, trans_strings only contains those for which
+        # no original existed.
+        return catalog, trans_strings.keys()
+    else:
+        return catalog
 
 
-def export(default_file, languages, output_dir, options):
+def po2xml(catalog):
+    """Convert the gettext catalog in ``catalog`` to an XML DOM.
+
+    This currently relies entirely in the fact that we can use the context
+    of each message to specify the Android resource name (which we need
+    to do to handle duplicates, but this is a nice by-product). However
+    that also means we cannot handle arbitrary catalogs.
+
+    The latter would in theory be possible by using the original,
+    untranslated XML to match up a messages id to a resource name, but
+    right now we don't support this (and it's not clear it would be
+    necessary, even).
+    """
+    impl = minidom.getDOMImplementation()
+    doc = impl.createDocument(None, 'resources', None)
+    root = doc.documentElement
+    for message in catalog:
+        if not message.id:
+            # This is the header
+            continue
+        string_el = doc.createElement('string')
+        string_el.setAttribute('name', message.context)
+        text_el = doc.createTextNode(message.string)
+        string_el.appendChild(text_el)
+        root.appendChild(string_el)
+    return doc
+
+
+def read_catalog(filename):
+    """Helper to read a catalog from a .po file.
+    """
+    file = open(filename, 'rb')
+    try:
+        return pofile.read_po(file)
+    finally:
+        file.close()
+
+
+def write_catalog(filename, catalog, **kwargs):
+    """Write a babel message catalog to file.
+
+    This is a simple shortcut around pofile.write_po().
+    """
+    file = open(filename, 'wb+')
+    try:
+        pofile.write_po(file, catalog, **kwargs)
+        file.flush()
+    finally:
+        file.close()
+
+
+def write_xml(filename, xmldom):
+    """Helper that writes out a DOM to a file.
+
+    TODO: It would be cool if this could try to recreate the formatting
+    of the original xml file.
+    """
+    ENCODING = 'utf-8'
+    file = open(filename, 'wb+')
+    try:
+        from xml.dom.ext import PrettyPrint
+        # TODO: For some reason, this only encodes the opening bracket of
+        # a nested HTML tag.
+        PrettyPrint(xmldom, stream=file, encoding=ENCODING, indent='\t')
+        file.flush()
+    finally:
+        file.close()
+
+
+def cmd_export(default_file, languages, output_dir, options):
     """The export command.
     """
     initial = options.pop('--initial', None) != None
+    overwrite = options.pop('--overwrite', None) != None
     if options:
         raise UnsupportedOptionsError()
+    if overwrite and initial:
+        print "Error: Cannot both specify --initial and --overwrite"
+        return 1
 
     # Create the gettext output dir, if necessary
     if not path.exists(output_dir):
@@ -63,78 +172,26 @@ def export(default_file, languages, output_dir, options):
     # mode below, since it uses the template.
     print "Generating template.pot"
     template_pot_file = path.join(output_dir, 'template.pot')
-    xml2po = make_xml2po('pot', template_pot_file)
-    xml2po.to_pot([default_file])
-    # xml2po doesn't do this; if we don't, we risk our shutil.copy
-    # only copying an incomplete file.
-    xml2po.out.flush()
+    default_po = xml2po(default_file)
+    write_catalog(template_pot_file, default_po)
 
-    if initial:
-        try:
-            import polib
-        except ImportError:
-            print "Error: polib (http://code.google.com/p/polib/) required " \
-                  "to use --initial."
-            return 1
-        else:
-            # See polib #22
-            polib.unescape = lambda st: st.decode('string_escape')
-
-        default_xml = load_xml_strings(default_file)
-        default_xml = dict((v,k) for k, v in default_xml.iteritems())
-
+    if initial or overwrite:
         for code, filename in languages.items():
             po_file = path.join(output_dir, "%s.po" % code)
-            if path.exists(po_file):
+            if path.exists(po_file) and not overwrite:
                 print "%s.po exists, skipping." % code
             else:
                 print "Generating %s.po..." % code,
-                lang_xml = load_xml_strings(filename)
-
-                # We could generate those po-files from scratch,
-                # but that would mean we have essentially two different
-                # generation routines; our own, and xml2po - potentially
-                # with differing meta data etc. So for now, copy the
-                # template we just generated and edit it instead.
-                #
-                # There is also a potential data disconnect - we have to
-                # match what we read from the language xml files with what
-                # xml2po generated based on the default resource xml.
-                # This is actually a pretty real concern, since it depends
-                # on how data is normalized too (say, replacing entities,
-                # trimming whitespace, both of which xml2po does).
-                shutil.copy2(template_pot_file, po_file)
-                po = polib.pofile(po_file)
-
-                count_strings = count_trans = 0
-                for entry in po:
-                    count_strings += 1
-                    if not entry.msgid in default_xml:
-                        print "Error: Cannot find resource name for \"%s...\", skipping." % \
-                            entry.msgid.replace('\n', '\\n').replace('\r', '\\r')[:30]
-                        continue
-                    name = default_xml[entry.msgid]
-                    if name in lang_xml:
-                        count_trans += 1
-                        entry.msgstr = lang_xml[name]
-
-                        # Remove so we know which one we handled.
-                        del lang_xml[name]
-
-                po.save()
-
-                print "%d strings, %d translations processed." % (
-                    count_strings, count_trans)
-
-                # If there are still strings left from the translation
-                # file, show a warning that we can't handle those.
-                if lang_xml:
+                lang_po, unmatched = xml2po(default_file, filename)
+                write_catalog(po_file, lang_po)
+                print "%d strings processed, %d translated." % (
+                    len(lang_po), len([m for m in lang_po if m.string]))
+                if unmatched:
                     print ("Warning: xml for %s contains strings "
                            "not found in default file: %s" % (
-                                code, ", ".join(lang_xml)))
+                                code, ", ".join(unmatched)))
 
     else:
-        print ""   # Improves formatting
         for code, filename in languages.items():
             po_file = path.join(output_dir, "%s.po" % code)
             if not path.exists(po_file):
@@ -142,52 +199,28 @@ def export(default_file, languages, output_dir, options):
                        "Use --initial.") % code
                 continue
 
-            xml2po = make_xml2po('update')
-            xml2po.update([default_file], po_file)
+            print "Processing %s" % code
+            lang_po = read_catalog(po_file)
+            lang_po.update(default_po)
+            # TODO: Should be include previous?
+            write_catalog(po_file, lang_po, include_previous=False)
 
 
-def import_(default_file, languages, output_dir, options):
+def cmd_import(default_file, languages, output_dir, options):
     """The import command.
     """
     if options:
         raise UnsupportedOptionsError()
 
     for code, filename in languages.items():
-        mo_file = path.join(output_dir, "%s.mo" % code)
-        if not path.exists(mo_file):
-            # TODO: The xml2po script runs msgfmt to create the .mo,
-            # optionally; we currently require the user to compile it.
-            print "Warning: Skipping %s, .mo file doesn't exist." % code
+        po_filename = path.join(output_dir, "%s.po" % code)
+        if not path.exists(po_filename):
+            print "Warning: Skipping %s, .po file doesn't exist." % code
             continue
         print "Processing %s" % code
-        xml2po = make_xml2po('merge', filename)
-        xml2po.merge(mo_file, default_file)
 
-
-def make_xml2po(operation, output='-'):
-    result = xml2po.Main('basic', operation, output, xml2po_options)
-    result.current_mode = AndroidMode()
-    return result
-
-
-def load_xml_strings(filename, normfunc=None):
-    """Load all resource names from an Android strings.xml resource file.
-    """
-    result = {}
-    doc = minidom.parse(filename)
-    for tag in doc.documentElement.getElementsByTagName('string'):
-        if not tag.attributes.has_key('name'):
-            continue
-        name = tag.attributes['name'].nodeValue
-        if name in result:
-            print "Error: %s contains duplicate string names: %s" % (filename, name)
-        # TODO: This is the perfect example of why having two different
-        # xml readers (xml2po and us) sucks - the replace() and strip calls
-        # attempt to recreate what xml2po gives us.
-        result[name] = "".join([n.toxml().replace('\n', ' ') for n in tag.childNodes]).strip()
-        if normfunc:
-            result[name] = normfunc(result[name])
-    return result
+        xml_dom = po2xml(read_catalog(po_filename))
+        write_xml(filename, xml_dom)
 
 
 def find_project_dir():
@@ -210,6 +243,8 @@ def find_project_dir():
     return None
 
 
+LANG_DIR = re.compile(r'^values(?:-(\w\w))?$')
+
 def collect_languages(resource_dir):
     languages = {}
     default_file = None
@@ -231,12 +266,12 @@ def collect_languages(resource_dir):
 
 def main(argv):
     options, arguments = getopt.getopt(argv[1:], '',
-        ['android=', 'gettext=', 'initial'])
+        ['android=', 'gettext=', 'initial', 'overwrite'])
     options = dict(options)
 
     handlers = {
-        'import': import_,
-        'export': export,
+        'import': cmd_import,
+        'export': cmd_export,
     }
 
     try:
