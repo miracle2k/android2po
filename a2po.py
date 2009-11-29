@@ -298,7 +298,9 @@ def cmd_export(default_file, languages, output_dir, options):
                 lang_po, unmatched = xml2po(default_file, filename)
                 write_catalog(po_file, lang_po)
                 print "%d strings processed, %d translated." % (
-                    len(lang_po), len([m for m in lang_po if m.string]))
+                    # Make sure we don't count the header.
+                    len(lang_po)-1,
+                    len([m for m in lang_po if m.string and m.id])-1)
                 if unmatched:
                     print ("Warning: xml for %s contains strings "
                            "not found in default file: %s" % (
