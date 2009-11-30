@@ -146,10 +146,19 @@ def _load_xml_strings(file):
         if tag.text:
             # Simple case, no nested tags, entities already decoded.
             value = tag.text
+            # Tags however, are true, which we do not want here; a &lt;
+            # needs to end up in the translation as a &lt; so it needs to
+            # be in the .po file as an &lt;
+            # TODO: In theory, it might be possible to note the fact the fact
+            # that those chars need to end up encoded in some .po comment,
+            # and thus let the translator work without the encoding.
+            value = value.replace('<', '&lt;')
+            value = value.replace('>', "&gt;")
         else:
             # We need to extract the whole subtree as a string.
             value = "".join([etree.tostring(x, encoding=unicode) for x in tag.iterdescendants()])
             value = value.strip()
+
             # TODO: Support more entities, like numerics?
             # Note that we do not translate < and >; since Android strings can
             # be HTML, let HTML be edited as-is in gettext; We just don't to
