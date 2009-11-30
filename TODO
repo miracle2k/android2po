@@ -74,6 +74,7 @@ could, or in some cases even incorrectly:
 Add some tests.
   - Test multiline strings.
   - Test all the escaping special cases listed above.
+  - Test &lt;&gt; encoded HTML (d5f8568cf7d16077c2c6a0c906cdcc5d2135030c)
 
 Support string-arrays. We can do this simply by writing them out using
 as a context "name:item-index".
