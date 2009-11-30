@@ -10,5 +10,7 @@ Handle \' escaping in Android strings.
 
 Support an option file to configure stuff like for example .po width.
 
+A setup.py to install system-wide, including dependencies, would be nice.
+
 Add some tests.
 	- Test multiline strings.
