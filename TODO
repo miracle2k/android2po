@@ -6,6 +6,9 @@ Try handling some whitespace edge cases:
 	http://stackoverflow.com/questions/1587056/android-string-concatenate-how-to-keep-the-spaces-at-the-end-and-or-beginning/1590912#1590912
 	http://code.google.com/p/android/issues/detail?id=4853
 
+Handle \' escaping in Android strings.
+
+Support an option file to configure stuff like for example .po width.
 
 Add some tests.
 	- Test multiline strings.

@@ -9,8 +9,9 @@ Author: Michael Elsdörfer <michael@elsdoerfer.com>
 Licensed under BSD.
 
 TODO: Use a better options parser.
-TODO: Use the -l option?
-TODO: Instead of using minidom, maybe add a dependency on lxml.
+
+Resources:
+    http://www.gnu.org/software/hello/manual/gettext/PO-Files.html
 """
 
 import os, sys
@@ -18,7 +19,7 @@ from os import path
 import re
 import getopt
 import codecs
-from xml.dom import minidom
+from lxml import etree
 from babel.messages import pofile, Catalog
 
 try:
@@ -133,15 +134,30 @@ def _load_xml_strings(file):
     """Load all resource names from an Android strings.xml resource file.
     """
     result = OrderedDict()
-    doc = minidom.parse(file)
-    for tag in doc.documentElement.getElementsByTagName('string'):
-        if not tag.attributes.has_key('name'):
+    doc = etree.parse(file)
+    for tag in doc.xpath('/resources/string'):
+        if not 'name' in tag.attrib:
             continue
-        name = tag.attributes['name'].nodeValue
+        name = tag.attrib['name']
         if name in result:
             print "Error: %s contains duplicate string names: %s" % (filename, name)
             continue
-        value = "".join([n.toxml() for n in tag.childNodes]).strip()
+
+        if tag.text:
+            # Simple case, no nested tags, entities already decoded.
+            value = tag.text
+        else:
+            # We need to extract the whole subtree as a string.
+            value = "".join([etree.tostring(x, encoding=unicode) for x in tag.iterdescendants()])
+            value = value.strip()
+            # TODO: Support more entities, like numerics?
+            # Note that we do not translate < and >; since Android strings can
+            # be HTML, let HTML be edited as-is in gettext; We just don't to
+            # bother the translator with those entities, especially for strings
+            # that do NOT have any HTML.
+            value = value.replace('&amp;', '&')
+            value = value.replace('&quot;', '"')
+            value = value.replace('&apos;', "'")
         # Android requires us to specify linebreaks in resources as "\n".
         # However, writing that into the .po a) breaks babel
         # (http://babel.edgewall.org/ticket/198), and b) doesn't seem
@@ -150,9 +166,7 @@ def _load_xml_strings(file):
         #      meaningless in Android anyway.
         #    * We replace all \n sequences with actual linebreaks.
         # On import, we reverse the effect.
-        # TODO: We currently don't seem to be decoding stuff like &amp;
-        # at this point.
-        value.replace('\n', '').replace(r'\n', '\n')
+        value = value.replace('\n', '').replace(r'\n', '\n')
         result[name] = value
     return result
 
@@ -203,21 +217,39 @@ def po2xml(catalog):
     right now we don't support this (and it's not clear it would be
     necessary, even).
     """
-    impl = minidom.getDOMImplementation()
-    doc = impl.createDocument(None, 'resources', None)
-    root = doc.documentElement
+    loose_parser = etree.XMLParser(recover=True)
+
+    root_el = etree.Element('resources')
     for message in catalog:
         if not message.id:
             # This is the header
             continue
-        string_el = doc.createElement('string')
-        string_el.setAttribute('name', message.context)
-        # With respect to the replacing we do, see the sibling call in
-        # _load_xml_strings().
-        text_el = doc.createTextNode(message.string.replace('\n', r'\n'))
-        string_el.appendChild(text_el)
-        root.appendChild(string_el)
-    return doc
+
+        if not message.string:
+            # Untranslated.
+            continue
+
+        # See the corresponding replace() in _load_xml_strings().
+        value = message.string.replace('\n', r'\n')
+
+        # The translations may contain arbitrary XHTML, which we need
+        # to inject into the DOM to properly output. That means parsing
+        # it first. That means we have to deal with potential errors
+        # here. It's ok though, if we wouldn't do it, we ultimately
+        # would simply end up generating an invalid resource file.
+        value = value.replace('&', '&amp;')
+        value = value.replace('"', '&quot;')
+        value = value.replace("'", '&apos;')
+        value_to_parse = "<string>%s</string>" % value
+        try:
+            string_el = etree.fromstring(value_to_parse)
+        except etree.XMLSyntaxError:
+            string_el = etree.fromstring(value_to_parse, loose_parser)
+            print "Error: Translation contains invalid XHTML (for resource %s)" % message.context
+
+        string_el.attrib['name'] = message.context
+        root_el.append(string_el)
+    return root_el
 
 
 def read_catalog(filename):
@@ -252,10 +284,8 @@ def write_xml(filename, xmldom):
     ENCODING = 'utf-8'
     file = open(filename, 'wb+')
     try:
-        from xml.dom.ext import PrettyPrint
-        # TODO: For some reason, this only encodes the opening bracket of
-        # a nested HTML tag.
-        PrettyPrint(xmldom, stream=file, encoding=ENCODING, indent='\t')
+        file.write(etree.tostring(xmldom, xml_declaration=True,
+                                  encoding=ENCODING, pretty_print=True))
         file.flush()
     finally:
         file.close()
@@ -317,7 +347,7 @@ def cmd_export(default_file, languages, output_dir, options):
             print "Processing %s" % code
             lang_po = read_catalog(po_file)
             lang_po.update(default_po)
-            # TODO: Should be include previous?
+            # TODO: Should we include previous?
             write_catalog(po_file, lang_po, include_previous=False)
 
 

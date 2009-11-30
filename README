@@ -12,6 +12,9 @@ babel > 0.9.4 (with context support)
 	- Currently, this means using an SVN checkout.
     - http://babel.edgewall.org/
 
+lxml
+	http://codespeak.net/lxml/
+
 Since the .po files this script generates use contexts (``msgctx```),
 that's what you're gettext software will have to support as well.
 
