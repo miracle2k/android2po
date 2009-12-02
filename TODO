@@ -4,8 +4,6 @@ Add support for --verbosity, --quiet options.
 
 Support an option file to configure stuff like for example .po width.
 
-A setup.py to install system-wide, including dependencies, would be nice.
-
 A number of Android format peculiarities are not handled as well as we
 could, or in some cases even incorrectly:
   - Whitespace. Generally Android removes incorrect whitespace, in much

@@ -22,6 +22,11 @@ import codecs
 from lxml import etree
 from babel.messages import pofile, Catalog
 
+
+__all__ = ('main',)
+__version__ = (0, 9)
+
+
 try:
     from colletions import OrderedDict
 except ImportError:
@@ -467,6 +472,5 @@ def main(argv):
         return 1
 
 
-if __name__ == '__main__':
+def run():
     sys.exit(main(sys.argv) or 0)
-

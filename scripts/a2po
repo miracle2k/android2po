@@ -1,0 +1,3 @@
+#!/usr/bin/env python
+import android2po
+android2po.main()
