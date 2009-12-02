@@ -5,3 +5,5 @@
 /BRANCH_TODO
 /build
 /dist
+
+*.pyc
