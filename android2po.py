@@ -148,39 +148,154 @@ def _load_xml_strings(file):
             print "Error: %s contains duplicate string names: %s" % (filename, name)
             continue
 
-        if tag.text:
-            # Simple case, no nested tags, entities already decoded.
-            value = tag.text
-            # Tags however, are true, which we do not want here; a &lt;
-            # needs to end up in the translation as a &lt; so it needs to
-            # be in the .po file as an &lt;
-            # TODO: In theory, it might be possible to note the fact the fact
-            # that those chars need to end up encoded in some .po comment,
-            # and thus let the translator work without the encoding.
-            value = value.replace('<', '&lt;')
-            value = value.replace('>', "&gt;")
-        else:
-            # We need to extract the whole subtree as a string.
-            value = "".join([etree.tostring(x, encoding=unicode) for x in tag.iterdescendants()])
-            value = value.strip()
+        WHITESPACE = ' \n\t'
+        EOF = None
 
-            # TODO: Support more entities, like numerics?
-            # Note that we do not translate < and >; since Android strings can
-            # be HTML, let HTML be edited as-is in gettext; We just don't to
-            # bother the translator with those entities, especially for strings
-            # that do NOT have any HTML.
-            value = value.replace('&amp;', '&')
-            value = value.replace('&quot;', '"')
-            value = value.replace('&apos;', "'")
-        # Android requires us to specify linebreaks in resources as "\n".
-        # However, writing that into the .po a) breaks babel
-        # (http://babel.edgewall.org/ticket/198), and b) doesn't seem
-        # to be the best solution anyway. Instead, what we do is:
-        #    * We ignore all *actual* linebreaks, since they are
-        #      meaningless in Android anyway.
-        #    * We replace all \n sequences with actual linebreaks.
-        # On import, we reverse the effect.
-        value = value.replace('\n', '').replace(r'\n', '\n')
+        def convert_text(text):
+            """This is called for every distinct block of text, as they
+            are separated by tags.
+
+            It handles most of the Android syntax rules: quoting, escaping,
+            collapsing duplicate whitespace etc.
+            """
+            # '<' and '>' as literal characters inside a text need to be
+            # escaped; this is because we need to differentiate them to
+            # actual tags inside a resource string which we write to the
+            # .po file as literal '<', '>' characters. As a result, if the
+            # user puts &lt; inside his Android resource file, this is how
+            # it will end up in the .po file as well.
+            # We only do this for '<' and '<' right now, which is of course
+            # a hack. We'd need to process at least &amp; as well, because
+            # right now '&lt;' and '&amp;lt;' both generate the same on
+            # import. However, if we were to do that, a simple non-HTML
+            # text like "FAQ & Help" would end up us "FAQ &amp; Help" in
+            # the .po - not particularly nice.
+            # TODO: I can see two approaches to solve this: Handle things
+            # differently depending on whether there are nested tags. We'd
+            # be able to handle both '&amp;lt;' in a HTML string and output
+            # a nice & character in a plaintext string.
+            # Option 2: It might be possible to note the type of encoding
+            # we did in a .po comment. That would even allow us to present
+            # a string containing tags encoded using entities (but not actual
+            # nested XML tags) using plain < and > characters in the .po
+            # file. Instead of a comment, we could change the import code
+            # to require a look at the original resource xml file to
+            # determine which kind of encoding was done.
+            text = text.replace('<', '&lt;')
+            text = text.replace('>', "&gt;")
+
+            # We need to collapse multiple whitespace while paying
+            # attention to Android's quoting and escaping.
+            space_count = 0
+            active_quote = False
+            escaped = False
+            i = 0
+            text = list(text) + [EOF]
+            while i < len(text):
+                c = text[i]
+
+                # Handle whitespace collapsing
+                if c is not EOF and c in WHITESPACE:
+                    space_count += 1
+                elif space_count > 1:
+                    # Remove duplicate whitespace; Pay attention: We
+                    # don't do this if we are currently inside a quote,
+                    # except for one special case: If we have unbalanced
+                    # quotes, e.g. we reach eof while a quote is still
+                    # open, we *do* collapse that trailing part; this is
+                    # how Android does it, for some reason.
+                    if not active_quote or c is EOF:
+                        del text[i-space_count:i-1]
+                        i -= space_count + 1
+                    space_count = 0
+                else:
+                    space_count = 0
+
+                # Handle quotes
+                if c == '"' and not escaped:
+                    active_quote = not active_quote
+                    del text[i]
+                    i -= 1
+
+                # Handle escapes
+                if c == '\\':
+                    if not escaped:
+                        escaped = True
+                    else:
+                        # A double-backslash represents a single;
+                        # simply deleting the current char will do.
+                        del text[i]
+                        i -= 1
+                        escaped = False
+                else:
+                    if escaped:
+                        # Handle the limited amount of escape codes
+                        # that we support.
+                        # TODO: What about \r, or \r\n?
+                        if c is EOF:
+                            # Basically like any other char, but put
+                            # this first so we can use the ``in`` operator
+                            # in the clauses below without issue.
+                            pass
+                        elif c == 'n':
+                            text[i-1:i+1] = '\n'  # an actual newline
+                            i -= 1
+                        elif c == 't':
+                            text[i-1:i+1] = '\t'  # an actual tab
+                            i -= 1
+                        elif c in '"\'':
+                            text[i-1:i] = ''    # remove the backslash
+                            i -= 1
+                        else:
+                            # All others, we simply keep unmodified.
+                            # Android itself actually seems to remove them,
+                            # but this is for the developer to resolve;
+                            # we're not trying to recreate the Android
+                            # parser 100%, merely handle those aspects that
+                            # are relevant to convert the text back and
+                            # forth without loss.
+                            pass
+                        escaped = False
+
+
+                i += 1
+
+            # Join the string together again, but w/o EOF marker
+            return "".join(text[:-1])
+
+        # We need to recreate the contents of this tag; this is more
+        # complicated as you might expect; firstly, there is nothing
+        # built into lxml (or any other parse I have seen for that
+        # matter). While it is possible to use the ``etree.tostring``
+        # to render this tag and it's children, this still would give
+        # us valid XML code; when in fact we want to decode everything
+        # XML (including entities), *except* tags. Much more than that
+        # though, the processing rules the Android xml format needs
+        # require custom processing anyway.
+        value = u""
+        for ev, elem  in etree.iterwalk(tag, events=('start', 'end',)):
+            is_root = elem == tag
+            if ev == 'start':
+                if not is_root:
+                    # TODO: We are currently not dealing correctly with
+                    # attribute value that needed escaping.
+                    params = "".join([" %s=\"%s\"" % (k, v) for k, v in elem.attrib.items()])
+                    value += u"<%s%s>" % (elem.tag, params)
+                if elem.text is not None:
+                    t = elem.text
+                    # Leading/Trailing whitespace is removed completely
+                    # ONLY if there are now nested tags. Handle this before
+                    # calling ``convert_text``, so that whitespace
+                    # protecting quotes can still be considered.
+                    if elem == tag and len(tag) == 0:
+                        t = t.strip(WHITESPACE)
+                    value += convert_text(t)
+            elif ev == 'end':
+                if not is_root:
+                    value += u"</%s>" % elem.tag
+                if elem.tail is not None:
+                    value += convert_text(elem.tail)
+
         result[name] = value
     return result
 
