@@ -291,10 +291,11 @@ def _load_xml_strings(file):
                         t = t.strip(WHITESPACE)
                     value += convert_text(t)
             elif ev == 'end':
+                # The closing root tag has no info for us at all.
                 if not is_root:
                     value += u"</%s>" % elem.tag
-                if elem.tail is not None:
-                    value += convert_text(elem.tail)
+                    if elem.tail is not None:
+                        value += convert_text(elem.tail)
 
         result[name] = value
     return result
