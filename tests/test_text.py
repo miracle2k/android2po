@@ -7,14 +7,16 @@ Tests in here ensure that this conversation happens correctly; that is,
 as closely to the way Android itself processes it's format as possible,
 without modifying a string (in terms of significant content).
 
-This currently follows the behavior I was seeing on an emulator using the
-Android 2.0 SDK release.
+This currently follows the behavior I was seeing on an emulator running
+the Android 1.6 SDK release, with an application compiled against the
+2.0 SDK release.
 """
 
 import re
 from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
+from nose.tools import assert_raises
 from android2po import xml2po, po2xml
 
 
@@ -98,6 +100,9 @@ class TestFromXML():
         # such a newline or tab (or other whitespace other than 'space').
         self.assert_convert('a\n\n\nb', 'a b')
         self.assert_convert('a\t\t\tb', 'a b')
+
+        # An all whitespace string isn't even included.
+        assert_raises(KeyError, self.assert_convert, '   ', '')
 
         # Quoting protects whitespace.
         self.assert_convert('"    a     b    "', '    a     b    ')
