@@ -93,6 +93,11 @@ class TestFromXML():
         # Newlines and even tabs are considered whitespace as well.
         self.assert_convert('a    \n\n   \n   \n\n  b', 'a b')
         self.assert_convert('a  \t\t   \t  b', 'a b')
+        # [bug] Edge case in which a non-significant newline/tab used to
+        # end up in the output (when the last whitespace character was
+        # such a newline or tab (or other whitespace other than 'space').
+        self.assert_convert('a\n\n\nb', 'a b')
+        self.assert_convert('a\t\t\tb', 'a b')
 
         # Quoting protects whitespace.
         self.assert_convert('"    a     b    "', '    a     b    ')

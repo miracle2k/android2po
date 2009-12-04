@@ -207,7 +207,9 @@ def _load_xml_strings(file):
                     # open, we *do* collapse that trailing part; this is
                     # how Android does it, for some reason.
                     if not active_quote or c is EOF:
-                        del text[i-space_count:i-1]
+                        # Replace by a single space, will get rid of
+                        # non-significant newlines/tabs etc.
+                        text[i-space_count:i] = ' '
                         i -= space_count + 1
                     space_count = 0
                 else:
