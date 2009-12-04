@@ -1,0 +1,6 @@
+recursive-include scripts *
+recursive-include tests *
+recursive-include *.rst
+recursive-include *.pip
+include MANIFEST.in
+include LICENSE
