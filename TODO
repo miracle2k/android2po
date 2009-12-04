@@ -6,3 +6,7 @@ Support an option file to configure stuff like for example .po width.
 
 Support string-arrays. We can do this simply by writing them out using
 as a context "name:item-index".
+
+More explicitly handle empty strings, like print a warning that they
+will not be included on export; on import, we might want to include
+them.
