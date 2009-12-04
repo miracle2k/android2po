@@ -42,7 +42,7 @@ Usage
 The basic idea is that:
 
     * ``values/strings.xml`` holds the reference strings in their
-      original language (the gettext ``msgid``s).
+      original language (the gettext ``msgid`` fields).
 
     * The gettext .po files generated and updated by this script contain
       the reference version of the translations.
