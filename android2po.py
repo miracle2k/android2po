@@ -280,7 +280,7 @@ def _load_xml_strings(file):
             if ev == 'start':
                 if not is_root:
                     # TODO: We are currently not dealing correctly with
-                    # attribute value that needed escaping.
+                    # attribute values that need escaping.
                     params = "".join([" %s=\"%s\"" % (k, v) for k, v in elem.attrib.items()])
                     value += u"<%s%s>" % (elem.tag, params)
                 if elem.text is not None:
