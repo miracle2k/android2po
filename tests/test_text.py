@@ -106,6 +106,10 @@ class TestFromXML():
         self.assert_convert(r'my name is \'earl\'',  'my name is \'earl\'')
         self.assert_convert(r'\\',  '\\')
 
+        # Test a practical case of a double-backslash protecting an
+        # escape sequence.
+        self.assert_convert(r'\\n',  r'\n')
+
         # XXX: Android seems to even normalize inserted newlines:
         #    r'\n\n\n\n\n' (as a literal string) ends up as ''
         #    r'a\n\n\n\n\n' (as a literal string) ends up as 'a'
@@ -144,8 +148,8 @@ class TestFromXML():
         # protected.
         self.assert_convert('"   a    b   <b></b>', '   a    b <b></b>')
 
-        # TODO: We haven't checked yet how Android behaves if "..."
-        # wraps around newlines.
+        # Quoting also protects other kinds of whitespace.
+        self.assert_convert('"   \n\t\t   \n\n "', '   \n\t\t   \n\n ')
 
         # Test an apostrophe inside quotes; we don't care much though,
         # we don't try to recreate Android's stricter error handling.
@@ -245,6 +249,12 @@ class TestToXML():
         self.assert_convert(' a ', '" a "')
         self.assert_convert('<b>hello</b> world', '<b>hello</b>" world"')
 
+        # Note newlines and tabs here; while they are considered collapsible
+        # inside Android's XML format, we only put significant whitespace
+        # our .po files. Ergo, when importing, multiple newlines (or tabs)
+        # will either need to be quoted, or escaped. We chose the latter.
+        self.assert_convert('a \n\n\n b \t\t\t c', 'a \\n\\n\\n b \\t\\t\\t c')
+
     def test_entities(self):
         """Test entity conversion when putting stuff into XML.
         """
@@ -275,4 +285,8 @@ class TestToXML():
         self.assert_convert('line1\t\t\tline3', 'line1\\t\\t\\tline3')
 
         # Also, backslash are escaped into double backslashes.
-        self.assert_convert('\\', '\\\\')
+        self.assert_convert('\\', r'\\')
+
+        # Test a practical case of a double backslash used to protect
+        # what would otherwise be considered a escape sequence.
+        self.assert_convert('\\n', r'\\n')
