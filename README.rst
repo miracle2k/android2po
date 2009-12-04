@@ -90,7 +90,7 @@ At this point, make sure you have a backup, since your language-specific
 control, right?!):
 
     $ a2po import
-    $ git diff --ignore-space-change res/values-XX/strings.xml
+    $ git diff --ignore-all-space res/values-XX/strings.xml
 
 In the example above, ``git`` is used for source control. ``git``
 provides a nice option to show a diff while ignoring whitespace
