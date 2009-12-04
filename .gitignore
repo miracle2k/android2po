@@ -2,8 +2,11 @@
 /.pydevproject
 /.settings/
 /default.properties
+
 /BRANCH_TODO
-/build
-/dist
+
+/build/
+/dist/
+/android2po.egg-info/
 
 *.pyc
