@@ -16,6 +16,7 @@ Resources:
 
 import os, sys
 from os import path
+from itertools import chain
 import re
 import getopt
 import codecs
@@ -135,6 +136,10 @@ class UnsupportedOptionsError(Exception):
     pass
 
 
+WHITESPACE = ' \n\t'     # Whitespace that we collapse
+EOF = None
+
+
 def _load_xml_strings(file):
     """Load all resource names from an Android strings.xml resource file.
     """
@@ -147,9 +152,6 @@ def _load_xml_strings(file):
         if name in result:
             print "Error: %s contains duplicate string names: %s" % (filename, name)
             continue
-
-        WHITESPACE = ' \n\t'
-        EOF = None
 
         def convert_text(text):
             """This is called for every distinct block of text, as they
@@ -359,23 +361,74 @@ def po2xml(catalog):
             # Untranslated.
             continue
 
-        # See the corresponding replace() in _load_xml_strings().
-        value = message.string.replace('\n', r'\n')
+        value = message.string
 
+        # PREPROCESS
         # The translations may contain arbitrary XHTML, which we need
         # to inject into the DOM to properly output. That means parsing
-        # it first. That means we have to deal with potential errors
-        # here. It's ok though, if we wouldn't do it, we ultimately
-        # would simply end up generating an invalid resource file.
+        # it first.
+        # This will now get really messy, since certain XML entities
+        # we have unescaped for the translators convenience, while the
+        # tag entities &lt; and &gt; we have not, to differentiate them
+        # from actual nested tags. Is there any good way to restore this
+        # properly?
         value = value.replace('&', '&amp;')
-        value = value.replace('"', '&quot;')
-        value = value.replace("'", '&apos;')
+        value = value.replace('&amp;lt;', '&lt;')
+        value = value.replace('&amp;gt;', '&gt;')
+
+        # PARSE
         value_to_parse = "<string>%s</string>" % value
         try:
             string_el = etree.fromstring(value_to_parse)
         except etree.XMLSyntaxError:
             string_el = etree.fromstring(value_to_parse, loose_parser)
             print "Error: Translation contains invalid XHTML (for resource %s)" % message.context
+
+        def quote(text):
+            """Return ``text`` surrounded by quotes if necessary.
+            """
+            if text is None:
+                return
+
+            # If there is trailing or leading whitespace, even if it's
+            # just a single space character, we need quoting.
+            needs_quoting = text.strip(WHITESPACE) != text
+
+            # Otherwise, there might be collapsible spaces inside the text.
+            if not needs_quoting:
+                space_count = 0
+                for c in chain(text, [EOF]):
+                    if c is not EOF and c in WHITESPACE:
+                        space_count += 1
+                        if space_count >= 2:
+                            needs_quoting = True
+                            break
+                    else:
+                        space_count = 0
+
+            if needs_quoting:
+                return '"%s"' % text
+            return text
+
+        def escape(text):
+            """Escape all the characters we know need to be escaped
+            in an Android XML file."""
+            if text is None:
+                return
+            text = text.replace('\\', '\\\\')
+            text = text.replace('\n', '\\n')
+            text = text.replace('\t', '\\t')
+            text = text.replace('\'', '\\\'')
+            text = text.replace('"', '\\"')
+            return text
+
+        # POSTPROCESS
+        for element in string_el.iter():
+            # Strictly speaking, we wouldn't want to touch things
+            # like the root elements tail, but it doesn't matter here,
+            # since they are going to be empty string anyway.
+            element.text = quote(escape(element.text))
+            element.tail = quote(escape(element.tail))
 
         string_el.attrib['name'] = message.context
         root_el.append(string_el)
