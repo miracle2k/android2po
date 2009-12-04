@@ -14,12 +14,11 @@ readable as well (i.e. no unnecessary escaping).
 Requirements
 ------------
 
-babel > 0.9.4 (with context support)
-	- Currently, this means using an SVN checkout.
-    - http://babel.edgewall.org/
+babel > 0.9.4 (with context support; currently, this means using an SVN checkout)
+    http://babel.edgewall.org/
 
 lxml
-	http://codespeak.net/lxml/
+    http://codespeak.net/lxml/
 
 Since the .po files this script generates use contexts (``msgctx```),
 that's what you're gettext software will have to support as well.
@@ -28,13 +27,13 @@ that's what you're gettext software will have to support as well.
 Installation
 ------------
 
-	$ python setup.py install
+    $ python setup.py install
 
 
 To install the dependencies, in particular the SVN version of babel, you
 can use ``pip``:
 
-	$ pip install -r requirements.pip
+    $ pip install -r requirements.pip
 
 
 Usage
@@ -64,7 +63,7 @@ as ``locale/xx.po``.
 
 You can specify both locations manually:
 
-	$ a2po --android ../my-resources COMMAND
+    $ a2po --android ../my-resources COMMAND
 
 The script automatically process all the languages found in your resource
 directory.
@@ -75,13 +74,13 @@ Initial setup
 When switching to ``android2po``, you will first want to create an
 initial export of your current translations.
 
-	$ a2po --initial export
+    $ a2po --initial export
 
 This will ignore any languages for which a ``.po`` file already exists.
 You can use the ``--overwrite`` flag to force an initial export of the
 XML files of all existing languages:
 
-  	$ a2po --overwrite export
+    $ a2po --overwrite export
 
 For testing purposes, you may want to immediately import the generated
 files back in, to compare with what you originally had, and make sure
@@ -139,7 +138,7 @@ find in your resource directory. To add a new language, create an
 empty ``strings.xml`` at the appropriate location (e.g.
 ``values-XX/strings.xml`` file), and then run
 
-	$ a2po --initial export
+    $ a2po --initial export
 
 to generate a ``.po`` counterpart. Alternatively, you also can simply
 copy the ``template.dot`` file the script also generates to the proper
