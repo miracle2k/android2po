@@ -25,7 +25,7 @@ from babel.messages import pofile, Catalog
 
 
 __all__ = ('main',)
-__version__ = (1, 0)
+__version__ = (1, 0, 1)
 
 
 try:
