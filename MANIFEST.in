@@ -4,3 +4,4 @@ include *.rst
 include *.pip
 include MANIFEST.in
 include LICENSE
+include CHANGES

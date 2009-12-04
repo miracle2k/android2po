@@ -1,0 +1,6 @@
+1.0.1
+    - The ``a2po`` script installed when only distutils is available was broken.
+    - Minor doc fixes.
+
+1.0.0
+    Initial release.
