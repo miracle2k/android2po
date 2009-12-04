@@ -261,7 +261,7 @@ class TestToXML():
         # A raw amp is properly encoded.
         self.assert_convert('FAQ & Help', 'FAQ &amp; Help')
         # Encoded tags are maintained literally, are not further escaped.
-        self.assert_convert('&lt;b/&gt;bold&lt;/b/&gt;', '&lt;b/&gt;bold&lt;/b/&gt;')
+        self.assert_convert('&lt;b&gt;bold&lt;/b&gt;', '&lt;b&gt;bold&lt;/b&gt;')
 
         # apos and quot are not using the entity, but the raw character;
         # although both need to be escaped, of course, see the
