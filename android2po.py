@@ -372,6 +372,8 @@ def po2xml(catalog):
         # tag entities &lt; and &gt; we have not, to differentiate them
         # from actual nested tags. Is there any good way to restore this
         # properly?
+        # TODO: In particular, the code below will once we do anything
+        # bit more complicated with entities, like &amp;amp;lt;
         value = value.replace('&', '&amp;')
         value = value.replace('&amp;lt;', '&lt;')
         value = value.replace('&amp;gt;', '&gt;')
