@@ -1,9 +1,9 @@
 1.x.x
-    - Fixed edge case in which non-significant newlines/tabs could 
+    - Fixed edge cases in which non-significant newlines/tabs could
       end up in the .po file.
 
 1.0.1
-    - The ``a2po`` script installed when only distutils is available 
+    - The ``a2po`` script installed when only distutils is available
       was broken.
     - Minor doc fixes.
 

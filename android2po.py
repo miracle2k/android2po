@@ -212,6 +212,15 @@ def _load_xml_strings(file):
                         text[i-space_count:i] = ' '
                         i -= space_count + 1
                     space_count = 0
+                elif space_count == 1:
+                    # At this point we have a single whitespace character,
+                    # but it might be a newline or tab. If we write this
+                    # kind of insignificant whitespace into the .po file,
+                    # it will be considered significant on import. So,
+                    # make sure that this kind of whitespace is always a
+                    # standard space.
+                    text[i-1] = ' '
+                    space_count = 0
                 else:
                     space_count = 0
 

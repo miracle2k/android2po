@@ -100,6 +100,10 @@ class TestFromXML():
         # such a newline or tab (or other whitespace other than 'space').
         self.assert_convert('a\n\n\nb', 'a b')
         self.assert_convert('a\t\t\tb', 'a b')
+        # [bug] This is a related edge case: A single non-significant
+        # newline or tab must not be maintained as an actual newline/tab,
+        # but as a space.
+        self.assert_convert('\n<b></b>', ' <b></b>')
 
         # An all whitespace string isn't even included.
         assert_raises(KeyError, self.assert_convert, '   ', '')
