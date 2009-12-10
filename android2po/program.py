@@ -427,7 +427,11 @@ def make_config(options):
         if not config.resource_dir:
             config.resource_dir = path.join(project_dir, 'res')
         if not config.gettext_dir:
-            config.gettext_dir = path.join(project_dir, 'locale/')
+            config.gettext_dir = path.join(project_dir, 'locale')
+
+    if options.verbose:
+        print "Using as Android resource dir: '%s'" % config.resource_dir
+        print "Using as gettext dir: '%s'" % config.gettext_dir
 
     return config
 
