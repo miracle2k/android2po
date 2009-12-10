@@ -144,7 +144,14 @@ def _load_xml_strings(file):
     """Load all resource names from an Android strings.xml resource file.
     """
     result = OrderedDict()
-    doc = etree.parse(file)
+
+    try:
+        doc = etree.parse(file)
+    except etree.XMLSyntaxError, e:
+        print "Error: Parsing xml failed: %s" % e
+        # Return empty
+        return result
+
     for tag in doc.xpath('/resources/string'):
         if not 'name' in tag.attrib:
             continue
