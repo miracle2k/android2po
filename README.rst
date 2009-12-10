@@ -71,7 +71,7 @@ You can specify both locations manually:
 
     $ a2po --android ../my-resources COMMAND
 
-The script automatically process all the languages found in your resource
+The script automatically processes all the languages found in your resource
 directory.
 
 Initial setup
