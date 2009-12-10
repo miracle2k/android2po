@@ -1,6 +1,31 @@
-Support "values-en-rUS-finger"-style resource directories.
+Path names specified in the config file are currently not relative to the
+config directory. That's really a must.
 
-Add option configure .po width.
+I'm not quite happy with the config file approach yet. In particular,
+upcoming options will require us to do validation, and we do not want
+to duplicate validation between config file and options.
+	- Possibly we can use the argparse facilities to validate our config.
+	- argparse has a mechanism to read arguments from a file. That would
+	  be good enough, except for the path-being-relative-to-config-dir
+	  issue.
+	- http://code.google.com/p/argparse/issues/detail?id=35
+
+Options we would like to support:
+	- messages to ignore
+	- ability to pull .po header fields into messages
+	- specify a gettext domain to use
+	- specify the gettext directory layout, based on the domain:
+		* domain-de.po
+		* domain/de.po
+		* de/domain.po
+		* de/LC_MESSAGES/domain.po
+
+The cmdline interface doesn't necessarily need tests, but our config
+file loading does.
+
+We need to write about the config file and it's options in the docs.
+
+Support "values-en-rUS-finger"-style resource directories.
 
 Support string-arrays. We can do this simply by writing them out using
 as a context "name:item-index".
