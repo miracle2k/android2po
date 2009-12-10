@@ -1,6 +1,6 @@
 Support "values-en-rUS-finger"-style resource directories.
 
-Support an option file to configure stuff like for example .po width.
+Add option configure .po width.
 
 Support string-arrays. We can do this simply by writing them out using
 as a context "name:item-index".
