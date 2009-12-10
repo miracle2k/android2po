@@ -237,7 +237,6 @@ class Config(object):
         for optdef in cls.OPTIONS:
             names = ('--%s' % optdef.get('name'),)
             kwargs = {
-                ''
                 'help': optdef.get('help', None),
                 'default': argparse.SUPPRESS,  # We have set our defaults manually.
                 'dest': optdef.get('dest', None),
