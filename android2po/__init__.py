@@ -9,9 +9,6 @@ Author: Michael Elsdörfer <michael@elsdoerfer.com>
 Licensed under BSD.
 
 TODO: Use a better options parser.
-
-Resources:
-    http://www.gnu.org/software/hello/manual/gettext/PO-Files.html
 """
 
 import os, sys

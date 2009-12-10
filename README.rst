@@ -150,16 +150,20 @@ Notes
 
 Initially based on:
     http://code.google.com/p/openintents/source/browse/tools/Androidxml2po/androidxml2po.bash
-    
-    
+
+
 Links of interest:
 ~~~~~~~~~~~~~~~~~~
 
+  - http://www.gnu.org/software/hello/manual/gettext/PO-Files.html
+
+    GNU PO file format docs.
+
   - http://docs.oasis-open.org/xliff/v1.2/xliff-profile-po/xliff-profile-po-1.2.html
-    
+
     Explains the gettext format according to how xliff interprets it.
 
   - http://www.artfulbits.com/Android/aiLocalizer.aspx
-  
+
     App to localize Android xml string files directly. They seems to be involved
     with the Ukrainian translation of Android itself.
