@@ -438,6 +438,9 @@ def prepare_env(config, options):
 
     # Find all languages.
     default_file, languages = collect_languages(config.resource_dir)
+    if not default_file:
+            raise CommandError('default language was not found.')
+
     if not options.quiet:
         print "Found %d language(s): %s" % (len(languages), ", ".join(languages))
 
