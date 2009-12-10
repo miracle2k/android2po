@@ -451,6 +451,8 @@ def prepare_env(config, options):
 
 def main(argv):
     """The program.
+
+    Returns an error code or None
     """
     try:
         options = parse_args(argv)
