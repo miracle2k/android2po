@@ -212,7 +212,12 @@ def collect_languages(resource_dir):
 
 
 def main(argv):
-    parser = argparse.ArgumentParser(prog='android2po')
+    from . import get_version
+    parser = argparse.ArgumentParser(
+        description='Convert Android string resources to gettext .po '+
+                    'files, an import them back.',
+        epilog='Written by: Michael Elsdoerfer <michael@elsdoerfer.com>',
+        version=get_version())
     parser.add_argument('--android',
         help='Android resource directory ($PROJECT/res by default)')
     parser.add_argument('--gettext',
