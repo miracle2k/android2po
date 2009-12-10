@@ -1,7 +1,5 @@
 Support "values-en-rUS-finger"-style resource directories.
 
-Add support for --verbosity, --quiet options.
-
 Support an option file to configure stuff like for example .po width.
 
 Support string-arrays. We can do this simply by writing them out using
