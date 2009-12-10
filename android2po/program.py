@@ -109,20 +109,16 @@ class ExportCommand(Command):
 
     @classmethod
     def setup_arg_parser(cls, parser):
-        parser.add_argument('--initial', action='store_true',
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--initial', action='store_true',
             help='Create .po files for new languages based their XML '+
                   'files')
-        parser.add_argument('--overwrite', action='store_true',
+        group.add_argument('--overwrite', action='store_true',
             help='Recreate .po files for all languages from their XML '+
                  'counterparts')
 
     def execute(self):
         env, options, config = self.env, self.options, self.config
-
-        # TODO: Can argparse resolve this?
-        if options.overwrite and options.initial:
-            self.i("Error: Cannot both specify --initial and --overwrite")
-            return 1
 
         # Create the gettext output directory, if necessary
         if not path.exists(config.gettext_dir):
