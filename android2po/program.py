@@ -83,8 +83,12 @@ class ExportCommand(Command):
 
     @classmethod
     def setup_arg_parser(cls, parser):
-        parser.add_argument('--initial', action='store_true')
-        parser.add_argument('--overwrite', action='store_true')
+        parser.add_argument('--initial', action='store_true',
+            help='Create .po files for new languages based their XML '+
+                  'files')
+        parser.add_argument('--overwrite', action='store_true',
+            help='Recreate .po files for all languages from their XML '+
+                 'counterparts')
 
     def execute(self):
         env = self.env
@@ -209,8 +213,10 @@ def collect_languages(resource_dir):
 
 def main(argv):
     parser = argparse.ArgumentParser(prog='android2po')
-    parser.add_argument('--android')
-    parser.add_argument('--gettext')
+    parser.add_argument('--android',
+        help='Android resource directory ($PROJECT/res by default)')
+    parser.add_argument('--gettext',
+        help='directory containing the .po files ($PROJECT/locale by default)')
     subparsers = parser.add_subparsers(dest="command")
 
     for name, cmdclass in COMMANDS.items():
