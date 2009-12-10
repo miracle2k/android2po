@@ -74,13 +74,13 @@ Initial setup
 When switching to ``android2po``, you will first want to create an
 initial export of your current translations.
 
-    $ a2po --initial export
+    $ a2po export --initial
 
 This will ignore any languages for which a ``.po`` file already exists.
 You can use the ``--overwrite`` flag to force an initial export of the
 XML files of all existing languages:
 
-    $ a2po --overwrite export
+    $ a2po export --overwrite
 
 For testing purposes, you may want to immediately import the generated
 files back in, to compare with what you originally had, and make sure
@@ -138,7 +138,7 @@ find in your resource directory. To add a new language, create an
 empty ``strings.xml`` at the appropriate location (e.g.
 ``values-XX/strings.xml`` file), and then run
 
-    $ a2po --initial export
+    $ a2po export --initial
 
 to generate a ``.po`` counterpart. Alternatively, you also can simply
 copy the ``template.dot`` file the script also generates to the proper

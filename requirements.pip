@@ -1,6 +1,7 @@
 # Install using pip install -r requirements.pip
 
 lxml
+argparse==1.0.1
 
 # We need the SVN version to get context support, the last release is ages ago.
 -e svn+http://svn.edgewall.org/repos/babel/trunk#egg=babel

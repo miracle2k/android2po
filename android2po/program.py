@@ -1,19 +1,20 @@
 """Implements the command line interface.
 """
 
+from __future__ import absolute_import
+
 import os, sys
 from os import path
 import re
-import getopt
+import argparse
 from lxml import etree
 from babel.messages import pofile
 
+from .utils import AttrDict
+from .convert import xml2po, po2xml
+
 
 __all__ = ('main', 'run',)
-
-
-class UnsupportedOptionsError(Exception):
-    pass
 
 
 def read_catalog(filename):
@@ -55,81 +56,114 @@ def write_xml(filename, xmldom):
         file.close()
 
 
-def cmd_export(default_file, languages, output_dir, options):
+class Command():
+    """Abstract base command class.
+    """
+
+    @classmethod
+    def setup_arg_parser(cls, argparser):
+        """A command should register it's sub-arguments here with the
+        given argparser instance.
+        """
+
+    def __init__(self, env, options):
+        """Will be initialized with the parsed command options, and
+        an environment object that contains information about the
+        project we are running inside.
+        """
+        self.env, self.options = env, options
+
+    def export(self):
+        raise NotImplementedError()
+
+
+class ExportCommand(Command):
     """The export command.
     """
-    initial = options.pop('--initial', None) != None
-    overwrite = options.pop('--overwrite', None) != None
-    if options:
-        raise UnsupportedOptionsError()
-    if overwrite and initial:
-        print "Error: Cannot both specify --initial and --overwrite"
-        return 1
 
-    # Create the gettext output dir, if necessary
-    if not path.exists(output_dir):
-        print "Created %s " % output_dir
-        # TODO: we should only create this if it was automatically found
-        os.makedirs(output_dir)
+    @classmethod
+    def setup_arg_parser(cls, parser):
+        parser.add_argument('--initial', action='store_true')
+        parser.add_argument('--overwrite', action='store_true')
 
-    # Update the template file in either case
-    # TODO: Should this really be generated in every case, or do we
-    # want to enable the user to set fixed meta data, and simply
-    # merge subsequent updates in? Note this may affect the --initial
-    # mode below, since it uses the template.
-    print "Generating template.pot"
-    template_pot_file = path.join(output_dir, 'template.pot')
-    default_po = xml2po(default_file)
-    write_catalog(template_pot_file, default_po)
+    def execute(self):
+        env = self.env
+        options = self.options
 
-    if initial or overwrite:
-        for code, filename in languages.items():
-            po_file = path.join(output_dir, "%s.po" % code)
-            if path.exists(po_file) and not overwrite:
-                print "%s.po exists, skipping." % code
-            else:
-                print "Generating %s.po..." % code,
-                lang_po, unmatched = xml2po(default_file, filename)
-                write_catalog(po_file, lang_po)
-                print "%d strings processed, %d translated." % (
-                    # Make sure we don't count the header.
-                    len(lang_po),
-                    len([m for m in lang_po if m.string and m.id]))
-                if unmatched:
-                    print ("Warning: xml for %s contains strings "
-                           "not found in default file: %s" % (
-                                code, ", ".join(unmatched)))
+        # TODO: Can argparse resolve this?
+        if options.overwrite and options.initial:
+            print "Error: Cannot both specify --initial and --overwrite"
+            return 1
 
-    else:
-        for code, filename in languages.items():
-            po_file = path.join(output_dir, "%s.po" % code)
-            if not path.exists(po_file):
-                print ("Warning: Skipping %s, .po file doesn't exist. "
-                       "Use --initial.") % code
-                continue
+        # Create the gettext output directory, if necessary
+        if not path.exists(env.gettext_dir):
+            print "Created %s " % env.gettext_dir
+            # TODO: we should only create this if it was automatically found
+            os.makedirs(env.gettext_dir)
 
-            print "Processing %s" % code
-            lang_po = read_catalog(po_file)
-            lang_po.update(default_po)
-            # TODO: Should we include previous?
-            write_catalog(po_file, lang_po, include_previous=False)
+        # Update the template file in either case
+        # TODO: Should this really be generated in every case, or do we
+        # want to enable the user to set fixed meta data, and simply
+        # merge subsequent updates in? Note this may affect the --initial
+        # mode below, since it uses the template.
+        print "Generating template.pot"
+        template_pot_file = path.join(env.gettext_dir, 'template.pot')
+        default_po = xml2po(env.default_file)
+        write_catalog(template_pot_file, default_po)
+
+        if options.initial or options.overwrite:
+            for code, filename in env.languages.items():
+                po_file = path.join(env.gettext_dir, "%s.po" % code)
+                if path.exists(po_file) and not options.overwrite:
+                    print "%s.po exists, skipping." % code
+                else:
+                    print "Generating %s.po..." % code,
+                    lang_po, unmatched = xml2po(env.default_file, filename)
+                    write_catalog(po_file, lang_po)
+                    print "%d strings processed, %d translated." % (
+                        # Make sure we don't count the header.
+                        len(lang_po),
+                        len([m for m in lang_po if m.string and m.id]))
+                    if unmatched:
+                        print ("Warning: xml for %s contains strings "
+                               "not found in default file: %s" % (
+                                    code, ", ".join(unmatched)))
+
+        else:
+            for code, filename in env.languages.items():
+                po_file = path.join(env.gettext_dir, "%s.po" % code)
+                if not path.exists(po_file):
+                    print ("Warning: Skipping %s, .po file doesn't exist. "
+                           "Use --initial.") % code
+                    continue
+
+                print "Processing %s" % code
+                lang_po = read_catalog(po_file)
+                lang_po.update(default_po)
+                # TODO: Should we include previous?
+                write_catalog(po_file, lang_po, include_previous=False)
 
 
-def cmd_import(default_file, languages, output_dir, options):
+class ImportCommand(Command):
     """The import command.
     """
-    if options:
-        raise UnsupportedOptionsError()
 
-    for code, filename in languages.items():
-        po_filename = path.join(output_dir, "%s.po" % code)
-        if not path.exists(po_filename):
-            print "Warning: Skipping %s, .po file doesn't exist." % code
-            continue
-        print "Processing %s" % code
+    def execute(self):
+        for code, filename in self.env.languages.items():
+            po_filename = path.join(self.env.gettext_dir, "%s.po" % code)
+            if not path.exists(po_filename):
+                print "Warning: Skipping %s, .po file doesn't exist." % code
+                continue
+            print "Processing %s" % code
 
-        xml_dom = po2xml(read_catalog(po_filename))
-        write_xml(filename, xml_dom)
+            xml_dom = po2xml(read_catalog(po_filename))
+            write_xml(filename, xml_dom)
+
+
+COMMANDS = {
+    'export': ExportCommand,
+    'import': ImportCommand,
+}
 
 
 def find_project_dir():
@@ -174,27 +208,20 @@ def collect_languages(resource_dir):
 
 
 def main(argv):
-    options, arguments = getopt.getopt(argv[1:], '',
-        ['android=', 'gettext=', 'initial', 'overwrite'])
-    options = dict(options)
+    parser = argparse.ArgumentParser(prog='android2po')
+    parser.add_argument('--android')
+    parser.add_argument('--gettext')
+    subparsers = parser.add_subparsers(dest="command")
 
-    handlers = {
-        'import': cmd_import,
-        'export': cmd_export,
-    }
+    for name, cmdclass in COMMANDS.items():
+        cmd_parser = subparsers.add_parser(name)
+        cmdclass.setup_arg_parser(cmd_parser)
 
-    try:
-        func = handlers[arguments[0]]
-        if len(arguments) > 1:
-            raise IndexError()
-    except (KeyError, IndexError):
-        print "Error: Expected a single argument, out of: %s" % \
-            ", ".join(handlers)
-        return 1
+    options = parser.parse_args(argv[1:])
 
     # Determine the directories to use
-    resource_dir = options.pop('--android', None)
-    gettext_dir = options.pop('--gettext', None)
+    resource_dir = options.android
+    gettext_dir = options.gettext
 
     if not resource_dir or not gettext_dir:
         project_dir = find_project_dir()
@@ -211,15 +238,15 @@ def main(argv):
     default_file, languages = collect_languages(resource_dir)
     print "Found %d language(s): %s" % (len(languages), ", ".join(languages))
 
-    # Run with the rest of the options, which are now considered
-    # command-specific.
-    try:
-        return func(default_file, languages, gettext_dir, options)
-    except UnsupportedOptionsError:
-        # Hacky - we export all supported options to be pop'ed by the
-        # command handler function.
-        print "Error: Unsupported options: %s" % ", ".join(options.keys())
-        return 1
+    # Setup an instance of the command class, then execute it.
+    env = AttrDict({
+        'languages': languages,
+        'default_file': default_file,
+        'gettext_dir': gettext_dir,
+        'resource_dir': resource_dir,
+    })
+    cmd = COMMANDS[options.command](env, options)
+    return cmd.execute()
 
 
 def run():

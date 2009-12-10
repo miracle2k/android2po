@@ -42,6 +42,6 @@ setup(name='android2po',
       url='http://github.com/miracle2k/android2po',
       license='BSD',
       py_modules=['android2po'],
-      install_requires = ['lxml',],
+      install_requires = ['lxml', 'argparse==1.0.1'],
       **kw
       )

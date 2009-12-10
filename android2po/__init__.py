@@ -7,8 +7,6 @@ import them right back.
 Author: Michael Elsdörfer <michael@elsdoerfer.com>
 
 Licensed under BSD.
-
-TODO: Use a better options parser.
 """
 
 from convert import *
