@@ -47,14 +47,14 @@ Usage
 
 The basic idea is that:
 
-    * ``values/strings.xml`` holds the reference strings in their
-      original language (the gettext ``msgid`` fields).
+* ``values/strings.xml`` holds the reference strings in their
+  original language (the gettext ``msgid`` fields).
 
-    * The gettext .po files generated and updated by this script contain
-      the reference version of the translations.
+* The gettext .po files generated and updated by this script contain
+  the reference version of the translations.
 
-    * The ``values-XX/strings.xml`` files are fully generated based on
-      your ``.po`` files, should not be modified manually.
+* The ``values-XX/strings.xml`` files are fully generated based on
+  your ``.po`` files, should not be modified manually.
 
 Aside from your authority strings.xml file, you usually will want to keep
 your file .po files in source control; The generated language-specific
@@ -161,15 +161,15 @@ Initially based on:
 Links of interest:
 ~~~~~~~~~~~~~~~~~~
 
-  - http://www.gnu.org/software/hello/manual/gettext/PO-Files.html
+- http://www.gnu.org/software/hello/manual/gettext/PO-Files.html
 
-    GNU PO file format docs.
+GNU PO file format docs.
 
-  - http://docs.oasis-open.org/xliff/v1.2/xliff-profile-po/xliff-profile-po-1.2.html
+- http://docs.oasis-open.org/xliff/v1.2/xliff-profile-po/xliff-profile-po-1.2.html
 
-    Explains the gettext format according to how xliff interprets it.
+Explains the gettext format according to how xliff interprets it.
 
-  - http://www.artfulbits.com/Android/aiLocalizer.aspx
+- http://www.artfulbits.com/Android/aiLocalizer.aspx
 
-    App to localize Android xml string files directly. They seems to be involved
-    with the Ukrainian translation of Android itself.
+App to localize Android xml string files directly. They seems to be involved
+with the Ukrainian translation of Android itself.
