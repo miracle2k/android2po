@@ -1,7 +1,7 @@
 __all__ = ('OrderedDict',)
 
 try:
-    from colletions import OrderedDict
+    from collections import OrderedDict
 except ImportError:
     # http://code.activestate.com/recipes/576693/
     from UserDict import DictMixin
