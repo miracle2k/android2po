@@ -347,10 +347,11 @@ def parse_args(argv):
 
     # Create parser for arguments shared by all commands.
     base_parser = argparse.ArgumentParser(add_help=False)
-    base_parser.add_argument('--verbose', '-v', action='store_true',
-                        help='be extra verbose')
-    base_parser.add_argument('--quiet', '-q', action='store_true',
-                        help='be extra quiet')
+    group = base_parser.add_mutually_exclusive_group()
+    group.add_argument('--verbose', '-v', action='store_true',
+                       help='be extra verbose')
+    group.add_argument('--quiet', '-q', action='store_true',
+                       help='be extra quiet')
     base_parser.add_argument('--config', '-c', metavar='FILE',
                         help='config file to use')
     # Add the arguments that set/override the configuration.
