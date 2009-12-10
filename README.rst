@@ -14,11 +14,17 @@ readable as well (i.e. no unnecessary escaping).
 Requirements
 ------------
 
+The following Python modules are required, but will mostly be
+auto-installed. See ``Installation`` below.
+
 babel > 0.9.4 (with context support; currently, this means using an SVN checkout)
     http://babel.edgewall.org/
 
 lxml
     http://codespeak.net/lxml/
+
+argparse
+	http://argparse.googlecode.com/
 
 Since the .po files this script generates use contexts (``msgctx``),
 that's what you're gettext software will have to support as well.
