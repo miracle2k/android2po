@@ -265,9 +265,9 @@ class Config(object):
         """
         # This is easy, we basically just have to copy the values.
         for optdef in self.OPTIONS:
-            name = optdef.get('dest', optdef.get('name'))
-            if hasattr(options, name):
-                setattr(options, name, getattr(options, name))
+            dest = optdef.get('dest', optdef.get('name'))
+            if hasattr(options, dest):
+                setattr(self, dest, getattr(options, dest))
 
 
 def find_project_dir_and_config():
