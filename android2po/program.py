@@ -22,12 +22,12 @@ class CommandError(Exception):
     pass
 
 
-def read_catalog(filename):
+def read_catalog(filename, **kwargs):
     """Helper to read a catalog from a .po file.
     """
     file = open(filename, 'rb')
     try:
-        return pofile.read_po(file)
+        return pofile.read_po(file, **kwargs)
     finally:
         file.close()
 
@@ -163,7 +163,13 @@ class ExportCommand(Command):
                     continue
 
                 self.p("Processing %s" % code)
-                lang_po = read_catalog(po_file)
+                # If we do not provide a locale, babel will consider this
+                # catalog a template and always write out the default
+                # header. It seemingly does not consider the "Language"
+                # header inside the file at all, and indeed deletes it.
+                # TODO: It deletes all headers it doesn't know, and
+                # overrides others. That sucks.
+                lang_po = read_catalog(po_file, locale=code)
                 lang_po.update(default_po)
                 # TODO: Should we include previous?
                 write_catalog(po_file, lang_po, include_previous=False)
