@@ -1,3 +1,5 @@
+Replace --initial flag with an "init" command.
+
 Path names specified in the config file are currently not relative to the
 config directory. That's really a must.
 
