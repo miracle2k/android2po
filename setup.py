@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # encoding: utf8
 """Adapted from virtualenv's setup.py
 """
