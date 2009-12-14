@@ -19,7 +19,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 # Figure out the version
 version_re = re.compile(
     r'__version__ = (\(.*?\))')
-fp = open(os.path.join(here, 'android2po.py'))
+fp = open(os.path.join(here, 'android2po/__init__.py'))
 version = None
 for line in fp:
     match = version_re.search(line)
