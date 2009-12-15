@@ -1,3 +1,5 @@
+Option to ignore fuzzy strings on import.
+
 Replace --initial flag with an "init" command.
 
 Path names specified in the config file are currently not relative to the
