@@ -159,7 +159,7 @@ class ExportCommand(Command):
                 po_file = path.join(config.gettext_dir, "%s.po" % code)
                 if not path.exists(po_file):
                     self.i("Warning: Skipping %s, .po file doesn't exist. "
-                           "Use --initial.") % code
+                           "Use --initial." % code) 
                     continue
 
                 self.p("Processing %s" % code)
