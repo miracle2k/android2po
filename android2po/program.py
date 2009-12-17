@@ -319,7 +319,7 @@ def find_project_dir_and_config():
     return None, None
 
 
-LANG_DIR = re.compile(r'^values(?:-(\w\w))?$')
+LANG_DIR = re.compile(r'^values(?:-(\w\w)(?:-r(\w\w))?)?$')
 
 def collect_languages(resource_dir):
     languages = {}
@@ -331,10 +331,13 @@ def collect_languages(resource_dir):
         match = LANG_DIR.match(name)
         if not match:
             continue
-        code = match.groups()[0]
-        if code == None:
+        country, region = match.groups()
+        if country == None:
             default_file = filename
         else:
+            code = "%s" % country
+            if region:
+                code += "_%s" % region
             languages[code] = filename
 
     return default_file, languages
