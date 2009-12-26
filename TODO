@@ -31,9 +31,6 @@ We need to write about the config file and it's options in the docs.
 
 Support "values-en-rUS-finger"-style resource directories.
 
-Support string-arrays. We can do this simply by writing them out using
-as a context "name:item-index".
-
 Support <plurals>/getQuantityString(). There seems to be a lack of
 documentation on the subject, but initial testing seems to indicate that
 only the following quantities are supported: zero, one, two, other. This
