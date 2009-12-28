@@ -41,6 +41,10 @@ can use ``pip``:
 
     $ pip install -r requirements.pip
 
+Afterwards, to finish the setup of the babel SVN version, make sure you
+follow this guide:
+
+    http://babel.edgewall.org/wiki/SubversionCheckout
 
 Usage
 ~~~~~
