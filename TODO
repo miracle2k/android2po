@@ -1,6 +1,8 @@
 Option to ignore fuzzy strings on import.
 
-Replace --initial flag with an "init" command.
+Replace --initial flag with an "init" command. This command could also
+support initializing an all new language, i.e. creating the strings.xml
+file for it.
 
 Path names specified in the config file are currently not relative to the
 config directory. That's really a must.
@@ -29,7 +31,11 @@ file loading does.
 
 We need to write about the config file and it's options in the docs.
 
-Support "values-en-rUS-finger"-style resource directories.
+Support "values-en-rUS-finger"-style resource directories. We could do
+this by adding a comment to each string indicating the source directory
+and/or file (allowing us to handle files like, say, arrays.xml as well).
+"import" can then use those comments to properly restore the strings in
+the correct locations.
 
 Support <plurals>/getQuantityString(). There seems to be a lack of
 documentation on the subject, but initial testing seems to indicate that
