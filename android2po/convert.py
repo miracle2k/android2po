@@ -274,7 +274,17 @@ def xml2po(file, translations=None):
 
 
 def write_to_dom(elem_name, value):
-    """
+    """Create a DOM object with the tag name ``elem_name``, containing
+    the string ``value`` formatted according to Android XML rules.
+
+    The result might be a <string>-tag, or a <item>-tag as found as
+    children of <string-array>, for example.
+
+    It might feel awkward at first that the Android-XML formatting
+    does not happen in a separate method, but is part of the creation
+    of a tag, but due to us having to do certain formatting based on
+    child DOM elements that ``value`` may include, the two fit
+    naturally together (see the POSTPROCESS section of this function).
     """
 
     # PREPROCESS
@@ -361,6 +371,16 @@ def po2xml(catalog, with_untranslated=False):
     untranslated XML to match up a messages id to a resource name, but
     right now we don't support this (and it's not clear it would be
     necessary, even).
+
+    If ``with_untranslated`` is given, then strings in the catalog
+    that have no translation are written out with the original id. In
+    the case of a string-array, if ``with_untranslated`` is NOT
+    specified, then only strings that DO have a translation are written
+    out, potentially causing the array to be incomplete.
+    TODO: This should not be the case: Arrays should always contain
+    all elements, whether translated or not (using an empty string
+    instead). When writing tests for this, make sure we generally test
+    the with_untranslated mode, i.e. also the behavior for normal strings.
     """
     loose_parser = etree.XMLParser(recover=True)
 
