@@ -402,7 +402,7 @@ def po2xml(catalog, with_untranslated=False):
             # Untranslated.
             continue
 
-        value = message.string
+        value = message.string or message.id
 
         if ':' in message.context:
             # A colon indicates a string array; collect all the
