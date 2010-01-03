@@ -287,6 +287,9 @@ def write_to_dom(elem_name, value):
     naturally together (see the POSTPROCESS section of this function).
     """
 
+    if value is None:
+        value = ''
+
     # PREPROCESS
     # The translations may contain arbitrary XHTML, which we need
     # to inject into the DOM to properly output. That means parsing
