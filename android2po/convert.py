@@ -273,7 +273,7 @@ def xml2po(file, translations=None):
         return catalog
 
 
-def write_to_dom(elem_name, value):
+def write_to_dom(elem_name, value, message):
     """Create a DOM object with the tag name ``elem_name``, containing
     the string ``value`` formatted according to Android XML rules.
 
@@ -286,6 +286,8 @@ def write_to_dom(elem_name, value):
     child DOM elements that ``value`` may include, the two fit
     naturally together (see the POSTPROCESS section of this function).
     """
+    
+    loose_parser = etree.XMLParser(recover=True)
 
     if value is None:
         value = ''
@@ -385,8 +387,6 @@ def po2xml(catalog, with_untranslated=False):
     instead). When writing tests for this, make sure we generally test
     the with_untranslated mode, i.e. also the behavior for normal strings.
     """
-    loose_parser = etree.XMLParser(recover=True)
-
     # First, process the catalog into a Python sort-of-tree structure.
     # We can't write directly to the XML output, since stuff like
     # string-array items are not guaranteed to appear in the correct
@@ -425,12 +425,12 @@ def po2xml(catalog, with_untranslated=False):
             array_el = etree.Element('string-array')
             array_el.attrib['name'] = name
             for k in sorted(value):
-                item_el = write_to_dom('item', value[k])
+                item_el = write_to_dom('item', value[k], message)
                 array_el.append(item_el)
             root_el.append(array_el)
         else:
             # standard string
-            string_el = write_to_dom('string', value)
+            string_el = write_to_dom('string', value, message)
             string_el.attrib['name'] = name
             root_el.append(string_el)
     return root_el
