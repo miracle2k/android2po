@@ -311,9 +311,9 @@ def write_to_dom(elem_name, value, message):
     value_to_parse = "<%s>%s</%s>" % (elem_name, value, elem_name)
     try:
         elem = etree.fromstring(value_to_parse)
-    except etree.XMLSyntaxError:
+    except etree.XMLSyntaxError, e:
         elem = etree.fromstring(value_to_parse, loose_parser)
-        print "Error: Translation contains invalid XHTML (for resource %s)" % message.context
+        print "Error: Translation contains invalid XHTML (for resource %s): %s" % (message.context, e)
 
     def quote(text):
         """Return ``text`` surrounded by quotes if necessary.
