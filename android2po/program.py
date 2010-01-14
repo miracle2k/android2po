@@ -10,7 +10,7 @@ import ConfigParser
 import argparse
 
 from .commands import *
-from .env import Environment
+from .env import Environment, Language
 
 
 __all__ = ('main', 'run',)
@@ -287,7 +287,8 @@ def prepare_env(config, options):
     # Setup an instance of the command class, then execute it.
     env = Environment()
     env.default_file = default_file
-    env.languages = languages
+    for code in languages.keys():
+        env.languages.append(Language(code, env))
     env.options = options
     env.config = config
     return env

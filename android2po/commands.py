@@ -6,6 +6,7 @@ from lxml import etree
 from babel.messages import pofile
 
 from .convert import xml2po, po2xml
+from .env import Language
 
 
 __all__ = ('CommandError', 'ExportCommand', 'ImportCommand', 'InitCommand',)
@@ -98,17 +99,12 @@ class Command(CmdInterface):
 
 class BaseExportingCommand(Command):
 
-    def generate_po(self, code, env, xml_file, po_file):
+    def generate_po(self, language):
         """Helper to generate a .po file.
-
-        ``code`` - the language code.
-        ``env`` - the current environment.
-        ``xml_file`` - the language xml file.
-        ``po_file`` - the place to store the .po file at.
         """
-        self.p("Generating %s.po..." % code, nl=False)
-        lang_po, unmatched = xml2po(env.default_file, xml_file)
-        write_catalog(po_file, lang_po)
+        self.p("Generating %s.po..." % language.code, nl=False)
+        lang_po, unmatched = xml2po(self.env.default_file, language.xml_path)
+        write_catalog(language.xml_path, lang_po)
         self.p("%d strings processed, %d translated." % (
             # Make sure we don't count the header.
             len(lang_po),
@@ -116,7 +112,7 @@ class BaseExportingCommand(Command):
         if unmatched:
             self.i("Warning: xml for %s contains strings "
                    "not found in default file: %s" % (
-                        code, ", ".join(unmatched)))
+                        language.code, ", ".join(unmatched)))
 
 
 class InitCommand(BaseExportingCommand):
@@ -132,32 +128,28 @@ class InitCommand(BaseExportingCommand):
     def execute(self):
         env, options, config = self.env, self.env.options, self.env.config
 
-        languages = options.language
-        if not languages:
-            languages = env.languages.keys()
+        if options.language:
+            languages = []
+            for code in options.language:
+                languages.append(Language(code, env))
+        else:
+            languages = env.languages
 
-        for code in languages:
-            if not code in env.languages:
-                # we actually need to create an empty strings.xml
-                filename = path.join(config.resource_dir,
-                                     'values-%s' % code,
-                                     'strings.xml')
-                dir = path.dirname(filename)
+        for language in languages:
+            if not language.has_xml():
+                dir = path.dirname(language.xml_path)
                 if not path.exists(dir):
                     os.makedirs(dir)
-                f = open(filename, 'wb')
+                f = open(language.xml_path, 'wb')
                 try:
                     f.write("""<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""")
                 finally:
                     f.close()
-            else:
-                filename = env.languages[code]
 
-            po_file = path.join(config.gettext_dir, "%s.po" % code)
-            if path.exists(po_file):
-                self.i("%s.po exists, skipping." % code)
+            if path.exists(language.po_path):
+                self.i("%s.po exists, skipping." % language.code)
             else:
-                self.generate_po(code, env, filename, po_file)
+                self.generate_po(language)
 
 
 class ExportCommand(BaseExportingCommand):
@@ -194,32 +186,30 @@ class ExportCommand(BaseExportingCommand):
         write_catalog(template_pot_file, default_po)
 
         if options.initial or options.overwrite:
-            for code, filename in env.languages.items():
-                po_file = path.join(config.gettext_dir, "%s.po" % code)
-                if path.exists(po_file) and not options.overwrite:
-                    self.i("%s.po exists, skipping." % code)
+            for language in env.languages:
+                if language.has_po() and not options.overwrite:
+                    self.i("%s.po exists, skipping." % language.code)
                 else:
-                    self.generate_po(code, env, filename, po_file)
+                    self.generate_po(language)
 
         else:
-            for code, filename in env.languages.items():
-                po_file = path.join(config.gettext_dir, "%s.po" % code)
-                if not path.exists(po_file):
+            for language in env.languages:
+                if not language.has_po:
                     self.i("Warning: Skipping %s, .po file doesn't exist. "
-                           "Use --initial." % code)
+                           "Use --initial." % language.code)
                     continue
 
-                self.p("Processing %s" % code)
+                self.p("Processing %s" % language.code)
                 # If we do not provide a locale, babel will consider this
                 # catalog a template and always write out the default
                 # header. It seemingly does not consider the "Language"
                 # header inside the file at all, and indeed deletes it.
                 # TODO: It deletes all headers it doesn't know, and
                 # overrides others. That sucks.
-                lang_po = read_catalog(po_file, locale=code)
+                lang_po = read_catalog(language.po_path, locale=language.code)
                 lang_po.update(default_po)
                 # TODO: Should we include previous?
-                write_catalog(po_file, lang_po, include_previous=False)
+                write_catalog(language.po_path, lang_po, include_previous=False)
 
 
 class ImportCommand(Command):
@@ -227,12 +217,11 @@ class ImportCommand(Command):
     """
 
     def execute(self):
-        for code, filename in self.env.languages.items():
-            po_filename = path.join(self.env.config.gettext_dir, "%s.po" % code)
-            if not path.exists(po_filename):
-                self.i("Warning: Skipping %s, .po file doesn't exist." % code)
+        for language in self.env.languages:
+            if not path.exists(language.po_path):
+                self.i("Warning: Skipping %s, .po file doesn't exist." % language.code)
                 continue
-            self.p("Processing %s" % code)
+            self.p("Processing %s" % language.code)
 
-            xml_dom = po2xml(read_catalog(po_filename))
-            write_xml(filename, xml_dom)
+            xml_dom = po2xml(read_catalog(language.po_path))
+            write_xml(language.xml_path, xml_dom)
