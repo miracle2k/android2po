@@ -77,7 +77,7 @@ def get_element_text(tag):
                 if not active_quote or c is EOF:
                     # Replace by a single space, will get rid of
                     # non-significant newlines/tabs etc.
-                    text[i-space_count:i] = ' '
+                    text[i - space_count:i] = ' '
                     i -= space_count + 1
                 space_count = 0
             elif space_count == 1:
@@ -87,7 +87,7 @@ def get_element_text(tag):
                 # it will be considered significant on import. So,
                 # make sure that this kind of whitespace is always a
                 # standard space.
-                text[i-1] = ' '
+                text[i - 1] = ' '
                 space_count = 0
             else:
                 space_count = 0
@@ -119,13 +119,13 @@ def get_element_text(tag):
                         # in the clauses below without issue.
                         pass
                     elif c == 'n':
-                        text[i-1:i+1] = '\n'  # an actual newline
+                        text[i - 1:i + 1] = '\n'  # an actual newline
                         i -= 1
                     elif c == 't':
-                        text[i-1:i+1] = '\t'  # an actual tab
+                        text[i - 1:i + 1] = '\t'  # an actual tab
                         i -= 1
                     elif c in '"\'':
-                        text[i-1:i] = ''    # remove the backslash
+                        text[i - 1:i] = ''    # remove the backslash
                         i -= 1
                     else:
                         # All others, we simply keep unmodified.
@@ -287,7 +287,7 @@ def write_to_dom(elem_name, value, message):
     child DOM elements that ``value`` may include, the two fit
     naturally together (see the POSTPROCESS section of this function).
     """
-    
+
     loose_parser = etree.XMLParser(recover=True)
 
     if value is None:
