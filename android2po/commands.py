@@ -59,7 +59,7 @@ class CmdInterface(object):
 
     def p(self, s, nl=True):
         """Print standard message."""
-        if not self.options.quiet:
+        if not self.env.options.quiet:
             if nl:
                 print s
             else:
@@ -67,7 +67,7 @@ class CmdInterface(object):
 
     def v(self, s):
         """Print verbose message."""
-        if not self.options.verbose:
+        if not self.env.options.verbose:
             print s
 
     def i(self, s):
@@ -85,12 +85,12 @@ class Command(CmdInterface):
         given argparser instance.
         """
 
-    def __init__(self, env, config, options):
+    def __init__(self, env):
         """Will be initialized with the parsed command options, and
         an environment object that contains information about the
         project we are running inside.
         """
-        self.env, self.config, self.options = env, config, options
+        self.env = env
 
     def export(self):
         raise NotImplementedError()
@@ -130,7 +130,7 @@ class InitCommand(BaseExportingCommand):
                  'languages lacking a .po file will be initialized.')
 
     def execute(self):
-        env, options, config = self.env, self.options, self.config
+        env, options, config = self.env, self.env.options, self.env.config
 
         languages = options.language
         if not languages:
@@ -175,7 +175,7 @@ class ExportCommand(BaseExportingCommand):
                  'counterparts')
 
     def execute(self):
-        env, options, config = self.env, self.options, self.config
+        env, options, config = self.env, self.env.options, self.env.config
 
         # Create the gettext output directory, if necessary
         if not path.exists(config.gettext_dir):
@@ -228,7 +228,7 @@ class ImportCommand(Command):
 
     def execute(self):
         for code, filename in self.env.languages.items():
-            po_filename = path.join(self.config.gettext_dir, "%s.po" % code)
+            po_filename = path.join(self.env.config.gettext_dir, "%s.po" % code)
             if not path.exists(po_filename):
                 self.i("Warning: Skipping %s, .po file doesn't exist." % code)
                 continue

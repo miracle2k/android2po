@@ -9,8 +9,8 @@ import re
 import ConfigParser
 import argparse
 
-from .utils import AttrDict
 from .commands import *
+from .env import Environment
 
 
 __all__ = ('main', 'run',)
@@ -285,11 +285,12 @@ def prepare_env(config, options):
         print "Found %d language(s): %s" % (len(languages), ", ".join(languages))
 
     # Setup an instance of the command class, then execute it.
-    # TODO: Could be an object like Config(), meaning we don't need AttrDict.
-    return AttrDict({
-        'languages': languages,
-        'default_file': default_file,
-    })
+    env = Environment()
+    env.default_file = default_file
+    env.languages = languages
+    env.options = options
+    env.config = config
+    return env
 
 
 def main(argv):
@@ -303,7 +304,7 @@ def main(argv):
         env = prepare_env(config, options)
 
         # Finally, run the command.
-        cmd = COMMANDS[options.command](env, config, options)
+        cmd = COMMANDS[options.command](env)
         return cmd.execute()
     except CommandError, e:
         print 'Error:', e
