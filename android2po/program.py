@@ -17,6 +17,7 @@ __all__ = ('main', 'run',)
 
 
 COMMANDS = {
+    'init': InitCommand,
     'export': ExportCommand,
     'import': ImportCommand,
 }

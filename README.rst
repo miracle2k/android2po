@@ -84,7 +84,7 @@ Initial setup
 When switching to ``android2po``, you will first want to create an
 initial export of your current translations.
 
-    $ a2po export --initial
+    $ a2po init
 
 This will ignore any languages for which a ``.po`` file already exists.
 You can use the ``--overwrite`` flag to force an initial export of the
@@ -144,15 +144,22 @@ Adding a new language
 ~~~~~~~~~~~~~~~~~~~~~
 
 As noted above, ``android2po`` will only process languages it can
-find in your resource directory. To add a new language, create an
-empty ``strings.xml`` at the appropriate location (e.g.
-``values-XX/strings.xml`` file), and then run
+find in your resource directory. To add a new language, simply run
 
-    $ a2po export --initial
+    $ a2po init {LANGUAGE CODES}
 
-to generate a ``.po`` counterpart. Alternatively, you also can simply
-copy the ``template.dot`` file the script also generates to the proper
-``xx.po`` file manually.
+For example:
+
+    $ a2po init de fr
+
+This will create both new .po and strings.xml files for German and French.
+
+Of course, you are also free to simply create the appropriate
+``strings.xml`` files yourself, and let
+
+    $ a2po init
+
+initialize their proper .po counterparts.
 
 
 Notes

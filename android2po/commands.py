@@ -8,7 +8,7 @@ from babel.messages import pofile
 from .convert import xml2po, po2xml
 
 
-__all__ = ('CommandError', 'ExportCommand', 'ImportCommand',)
+__all__ = ('CommandError', 'ExportCommand', 'ImportCommand', 'InitCommand',)
 
 
 class CommandError(Exception):
@@ -96,7 +96,71 @@ class Command(CmdInterface):
         raise NotImplementedError()
 
 
-class ExportCommand(Command):
+class BaseExportingCommand(Command):
+
+    def generate_po(self, code, env, xml_file, po_file):
+        """Helper to generate a .po file.
+
+        ``code`` - the language code.
+        ``env`` - the current environment.
+        ``xml_file`` - the language xml file.
+        ``po_file`` - the place to store the .po file at.
+        """
+        self.p("Generating %s.po..." % code, nl=False)
+        lang_po, unmatched = xml2po(env.default_file, xml_file)
+        write_catalog(po_file, lang_po)
+        self.p("%d strings processed, %d translated." % (
+            # Make sure we don't count the header.
+            len(lang_po),
+            len([m for m in lang_po if m.string and m.id])))
+        if unmatched:
+            self.i("Warning: xml for %s contains strings "
+                   "not found in default file: %s" % (
+                        code, ", ".join(unmatched)))
+
+
+class InitCommand(BaseExportingCommand):
+    """The init command; to initialize new languages.
+    """
+
+    @classmethod
+    def setup_arg_parser(cls, parser):
+        parser.add_argument('language', nargs='*',
+            help='Language code to initialize. If none given, all '+
+                 'languages lacking a .po file will be initialized.')
+
+    def execute(self):
+        env, options, config = self.env, self.options, self.config
+
+        languages = options.language
+        if not languages:
+            languages = env.languages.keys()
+
+        for code in languages:
+            if not code in env.languages:
+                # we actually need to create an empty strings.xml
+                filename = path.join(config.resource_dir,
+                                     'values-%s' % code,
+                                     'strings.xml')
+                dir = path.dirname(filename)
+                if not path.exists(dir):
+                    os.makedirs(dir)
+                f = open(filename, 'wb')
+                try:
+                    f.write("""<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""")
+                finally:
+                    f.close()
+            else:
+                filename = env.languages[code]
+
+            po_file = path.join(config.gettext_dir, "%s.po" % code)
+            if path.exists(po_file):
+                self.i("%s.po exists, skipping." % code)
+            else:
+                self.generate_po(code, env, filename, po_file)
+
+
+class ExportCommand(BaseExportingCommand):
     """The export command.
     """
 
@@ -135,17 +199,7 @@ class ExportCommand(Command):
                 if path.exists(po_file) and not options.overwrite:
                     self.i("%s.po exists, skipping." % code)
                 else:
-                    self.p("Generating %s.po..." % code, nl=False)
-                    lang_po, unmatched = xml2po(env.default_file, filename)
-                    write_catalog(po_file, lang_po)
-                    self.p("%d strings processed, %d translated." % (
-                        # Make sure we don't count the header.
-                        len(lang_po),
-                        len([m for m in lang_po if m.string and m.id])))
-                    if unmatched:
-                        self.i("Warning: xml for %s contains strings "
-                               "not found in default file: %s" % (
-                                    code, ", ".join(unmatched)))
+                    self.generate_po(code, env, filename, po_file)
 
         else:
             for code, filename in env.languages.items():

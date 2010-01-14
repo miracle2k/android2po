@@ -1,9 +1,5 @@
 Option to ignore fuzzy strings on import.
 
-Replace --initial flag with an "init" command. This command could also
-support initializing an all new language, i.e. creating the strings.xml
-file for it.
-
 Path names specified in the config file are currently not relative to the
 config directory. That's really a must.
 

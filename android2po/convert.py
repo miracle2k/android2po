@@ -230,7 +230,8 @@ def xml2po(file, translations=None):
     not in the original.
     """
     original_strings = _load_xml_strings(file)
-    trans_strings = _load_xml_strings(translations) if translations else None
+    trans_strings = _load_xml_strings(translations) \
+                            if translations is not None else None
 
     catalog = Catalog()
     for name, org_value in original_strings.iteritems():
