@@ -104,7 +104,7 @@ class BaseExportingCommand(Command):
         """
         self.p("Generating %s.po..." % language.code, nl=False)
         lang_po, unmatched = xml2po(self.env.default_file, language.xml_path)
-        write_catalog(language.xml_path, lang_po)
+        write_catalog(language.po_path, lang_po)
         self.p("%d strings processed, %d translated." % (
             # Make sure we don't count the header.
             len(lang_po),
@@ -126,11 +126,11 @@ class InitCommand(BaseExportingCommand):
                  'languages lacking a .po file will be initialized.')
 
     def execute(self):
-        env, options, config = self.env, self.env.options, self.env.config
+        env = self.env
 
-        if options.language:
+        if env.options.language:
             languages = []
-            for code in options.language:
+            for code in env.options.language:
                 languages.append(Language(code, env))
         else:
             languages = env.languages
@@ -167,13 +167,13 @@ class ExportCommand(BaseExportingCommand):
                  'counterparts')
 
     def execute(self):
-        env, options, config = self.env, self.env.options, self.env.config
+        env = self.env
 
         # Create the gettext output directory, if necessary
-        if not path.exists(config.gettext_dir):
-            self.p("Created %s " % config.gettext_dir)
+        if not path.exists(env.gettext_dir):
+            self.p("Created %s " % env.gettext_dir)
             # TODO: we should only create this if it was automatically found
-            os.makedirs(config.gettext_dir)
+            os.makedirs(env.gettext_dir)
 
         # Update the template file in either case
         # TODO: Should this really be generated in every case, or do we
@@ -181,13 +181,13 @@ class ExportCommand(BaseExportingCommand):
         # merge subsequent updates in? Note this may affect the --initial
         # mode below, since it uses the template.
         self.p("Generating template.pot")
-        template_pot_file = path.join(config.gettext_dir, 'template.pot')
+        template_pot_file = path.join(env.gettext_dir, 'template.pot')
         default_po = xml2po(env.default_file)
         write_catalog(template_pot_file, default_po)
 
-        if options.initial or options.overwrite:
+        if env.options.initial or env.options.overwrite:
             for language in env.languages:
-                if language.has_po() and not options.overwrite:
+                if language.has_po() and not env.options.overwrite:
                     self.i("%s.po exists, skipping." % language.code)
                 else:
                     self.generate_po(language)

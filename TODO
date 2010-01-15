@@ -5,18 +5,6 @@ similar to how compress does:
 
 Option to ignore fuzzy strings on import.
 
-Path names specified in the config file are currently not relative to the
-config directory. That's really a must.
-
-I'm not quite happy with the config file approach yet. In particular,
-upcoming options will require us to do validation, and we do not want
-to duplicate validation between config file and options.
-	- Possibly we can use the argparse facilities to validate our config.
-	- argparse has a mechanism to read arguments from a file. That would
-	  be good enough, except for the path-being-relative-to-config-dir
-	  issue.
-	- http://code.google.com/p/argparse/issues/detail?id=35
-
 Options we would like to support:
 	- messages to ignore
 	- ability to pull .po header fields into messages
