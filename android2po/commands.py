@@ -194,7 +194,7 @@ class ExportCommand(BaseExportingCommand):
 
         else:
             for language in env.languages:
-                if not language.has_po:
+                if not language.has_po():
                     self.i("Warning: Skipping %s, .po file doesn't exist. "
                            "Use --initial." % language.code)
                     continue

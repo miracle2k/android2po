@@ -33,7 +33,7 @@ class Language(object):
         return path.exists(self.xml_path)
 
     def has_po(self):
-        return path.exists(self.xml_po)
+        return path.exists(self.po_path)
 
 
 class Environment(object):
