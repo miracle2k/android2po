@@ -71,7 +71,7 @@ class Config:
         for name in ('gettext_dir', 'resource_dir'):
             value = getattr(config, name, None)
             if value is not None:
-                setattr(config, name, path.join(base_path, value))
+                setattr(config, name, path.normpath(path.join(base_path, value)))
 
 
 def parse_args(argv):
@@ -112,8 +112,10 @@ def parse_args(argv):
     return parser.parse_args(argv[1:])
 
 
-def read_config(filename):
-    """Read the config file in ``filename``.
+def read_config(file):
+    """Read the config file in ``file``.
+
+    ``file`` may either be a file object, or a filename.
 
     The config file currently is simply a file with command line options,
     each option on a separate line.
@@ -126,13 +128,26 @@ def read_config(filename):
     as we currently need.
     """
 
-    # Open the config file and read the arguments.
-    f = open(filename, 'rb')
-    try:
-        lines = f.readlines()
-    finally:
-        f.close()
-    args = map(str.strip, " ".join(lines).split(" "))
+    if hasattr(file, 'read'):
+        lines = file.readlines()
+        if hasattr(file, 'name'):
+            filename = file.name
+        else:
+            filename = None
+    else:
+        # Open the config file and read the arguments.
+        filename = file
+        f = open(file, 'rb')
+        try:
+            lines = f.readlines()
+        finally:
+            f.close()
+
+    args = filter(lambda x: bool(x),     # get rid of '' elements
+                  map(str.strip,         # get rid of surrounding whitespace
+                      " ".join(filter(lambda x: not x.strip().startswith('#'),
+                                      lines)
+                      ).split(" ")))
 
     # Use a parser that specifically only supports those options that
     # we want to support within a config file (as opposed to all the
@@ -145,7 +160,8 @@ def read_config(filename):
 
     # Post process the config: Paths in the config file should be relative
     # to the config location, not the current working directory.
-    Config.rebase_paths(config, path.dirname(filename))
+    if filename:
+        Config.rebase_paths(config, path.dirname(filename))
 
     return config
 
