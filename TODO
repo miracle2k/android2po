@@ -15,8 +15,10 @@ Options we would like to support:
 		* de/domain.po
 		* de/LC_MESSAGES/domain.po
 
-The cmdline interface doesn't necessarily need tests, but our config
-file loading does.
+There are large area of code that we currently don't test; mostly the
+whole environment handling, the way the config file is detected, it's
+interaction with the arguments passed on the command line; how the
+list of languages read etc.
 
 Support "values-en-rUS-finger"-style resource directories. We could do
 this by adding a comment to each string indicating the source directory
