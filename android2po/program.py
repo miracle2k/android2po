@@ -117,6 +117,13 @@ def read_config(filename):
 
     The config file currently is simply a file with command line options,
     each option on a separate line.
+
+    Just for reference purposes, the following ticket should be noted,
+    which intends to extend argparse with support for configuration files:
+        http://code.google.com/p/argparse/issues/detail?id=35
+    Note however that the current patch doesn't seem to provide an easy
+    way to make paths in the config relative to the config file location,
+    as we currently need.
     """
 
     # Open the config file and read the arguments.
