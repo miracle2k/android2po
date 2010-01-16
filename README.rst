@@ -162,6 +162,29 @@ Of course, you are also free to simply create the appropriate
 initialize their proper .po counterparts.
 
 
+Configuration file
+~~~~~~~~~~~~~~~~~~
+
+A configuration file can be used to avoid manually specifying all the
+required options. The format of the file is simply a list of command
+line option, each specified on a line of it's own. For example:
+
+    --ignore-fuzzy
+    # Paths - don't specify --android, default location is used.
+    --gettext ../locale
+
+As you can see, comments are supported by using ``#``, and the mechanism
+to automatically try to detect the directories for .po files and Android
+``strings.xml`` files is still in place.
+
+The configuration file may be specified by using the ``--config`` option.
+Alternatively, if a ``.android2po`` file is found in the project directory,
+it will be used.
+
+"Project directory" is either the parent directory that contains
+``AndroidManifest.xml``, or ``.android2po``, whichever is found first.
+
+
 Notes
 -----
 

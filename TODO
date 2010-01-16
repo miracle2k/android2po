@@ -18,8 +18,6 @@ Options we would like to support:
 The cmdline interface doesn't necessarily need tests, but our config
 file loading does.
 
-We need to write about the config file and it's options in the docs.
-
 Support "values-en-rUS-finger"-style resource directories. We could do
 this by adding a comment to each string indicating the source directory
 and/or file (allowing us to handle files like, say, arrays.xml as well).
