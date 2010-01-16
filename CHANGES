@@ -4,6 +4,7 @@
     - Added support for string-array.
     - New "init" command, which expands on "export --initial", and
       can also be used to initialize arbitrary new languages.
+    - Support for configuration files.
 
 1.0.1
     - The ``a2po`` script installed when only distutils is available
