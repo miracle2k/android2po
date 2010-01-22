@@ -131,7 +131,8 @@ class Environment(object):
     def __init__(self):
         self.languages = []
         self.default_file = None
-        self.auto_directories = False
+        self.auto_gettext_dir = None
+        self.auto_resource_dir = None
         self.resource_dir = None
         self.gettext_dir = None
 
@@ -173,11 +174,10 @@ class Environment(object):
         if self.project_dir:
             if not self.resource_dir:
                 self.resource_dir = path.join(self.project_dir, 'res')
-                self.auto_directories = True
+                self.auto_resource_dir = True
             if not self.gettext_dir:
                 self.gettext_dir = path.join(self.project_dir, 'locale')
-                self.auto_directories = True
-        return self.auto_directories
+                self.auto_gettext_dir = True
 
     def init(self):
         """Initialize the environment.
@@ -198,7 +198,7 @@ class Environment(object):
         # exist yet, so we create it automatically, but ONLY if it wasn't
         # specified explicitely. If the user gave a specific location,
         # it seems right to let him deal with it fully.        
-        if not path.exists(self.gettext_dir) and self.auto_directories:
+        if not path.exists(self.gettext_dir) and self.auto_gettext_dir:
             os.makedirs(self.gettext_dir)
         elif not path.exists(self.gettext_dir):            
             raise EnvironmentError('Gettext directory at "%s" doesn\'t exist.' % 

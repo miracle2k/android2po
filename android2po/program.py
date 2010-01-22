@@ -208,7 +208,7 @@ def make_env(argv):
     # Some paths, if we still don't have values for them, can be deducted
     # from the project directory.
     env.auto_paths()
-    if env.options.verbose and env.auto_directories:
+    if env.options.verbose and (env.auto_gettext_dir or env.auto_resource_dir):
         # Let the user know we are deducting information from the
         # project that we found.
         print "Assuming default directory structure in '%s'" % project_dir
