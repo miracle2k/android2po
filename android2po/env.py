@@ -186,8 +186,26 @@ class Environment(object):
         doing some basic validation. An ``EnvironmentError`` is thrown
         if there is something wrong.
         """
+        # If either of those is not specified, we can't continue. Raise a 
+        # special exception that let's the caller display the proper steps
+        # on how to proceed.
         if not self.resource_dir or not self.gettext_dir:
             raise IncompleteEnvironment()
+        
+        # It's not enough for directories to be specified; they really 
+        # should exist as well. In particular, the locale/ directory is 
+        # not part of the standard Android tree and thus likely to not
+        # exist yet, so we create it automatically, but ONLY if it wasn't
+        # specified explicitely. If the user gave a specific location,
+        # it seems right to let him deal with it fully.        
+        if not path.exists(self.gettext_dir) and self.auto_directories:
+            os.makedirs(self.gettext_dir)
+        elif not path.exists(self.gettext_dir):            
+            raise EnvironmentError('Gettext directory at "%s" doesn\'t exist.' % 
+                                   self.gettext_dir)
+        elif not path.exists(self.resource_dir):
+            raise EnvironmentError('Android resource direcory at "%s" doesn\'t exist.' % 
+                                   self.resource_dir)
 
         # Create an environment object based on all the data we have now.
         default_file, languages = collect_languages(self.resource_dir)

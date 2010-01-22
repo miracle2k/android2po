@@ -169,12 +169,6 @@ class ExportCommand(BaseExportingCommand):
     def execute(self):
         env = self.env
 
-        # Create the gettext output directory, if necessary
-        if not path.exists(env.gettext_dir):
-            self.p("Created %s " % env.gettext_dir)
-            # TODO: we should only create this if it was automatically found
-            os.makedirs(env.gettext_dir)
-
         # Update the template file in either case
         # TODO: Should this really be generated in every case, or do we
         # want to enable the user to set fixed meta data, and simply
