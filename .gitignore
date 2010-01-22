@@ -1,10 +1,15 @@
+# Eclipse/PyDev
 /.project
 /.pydevproject
 /.settings/
 /default.properties
 
+# WingIDE
+/android2po.wpr
+
 /BRANCH_TODO
 
+# distutils
 /build/
 /dist/
 /android2po.egg-info/
