@@ -7,7 +7,8 @@ import sys
 from os import path
 import argparse
 
-from .commands import *
+# Resist the temptation to use "*". It won't work on Python 2.5.
+from .commands import InitCommand, ExportCommand, ImportCommand
 from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
 
 
