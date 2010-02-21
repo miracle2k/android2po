@@ -36,7 +36,7 @@ class Language(object):
                          'values-%s/%s' % (android_code, filename))
 
     def po_file(self, filename):
-        return path.join(self.env.gettext_dir, '%s-%s.po' % (filename, self.code))
+        return path.join(self.env.gettext_dir, filename % self.code)
 
     def has_xml(self, filename):
         return path.exists(self.xml_file(filename))
@@ -109,13 +109,21 @@ def collect_languages(resource_dir):
                 if path.isfile(file):
                     files.append((file,
                                   filename,
-                                  filename.split('.')[0])
+                                  filename.split('.')[0]+"-%s.po",
+                                  filename.split('.')[0]+".pot"),
                     )
         else:
             code = "%s" % country
             if region:
                 code += "_%s" % region
             languages.append(code)
+
+    # check how many files was found
+    # if there is only strings.xml, the new filename only
+    # consists of the language code because of the behavior
+    # of the first versions of android2po
+    if (len(files) == 1) and (files[0][1] == 'strings.xml'):
+        files = [(files[0][0], files[0][1], "%s.po", "template.pot")]
 
     return files, languages
 
