@@ -25,8 +25,7 @@ class Language(object):
         self.code = code
         self.env = env
 
-    @property
-    def xml_path(self):
+    def xml_file(self, filename):
         # Android uses a special language code format for the region part
         parts = tuple(self.code.split('_', 2))
         if len(parts) == 2:
@@ -34,17 +33,17 @@ class Language(object):
         else:
             android_code = "%s" % parts
         return path.join(self.env.resource_dir,
-                         'values-%s/strings.xml' % android_code)
+                         'values-%s/%s' % (android_code, filename))
 
-    @property
-    def po_path(self):
-        return path.join(self.env.gettext_dir, '%s.po' % self.code)
+    def po_file(self, filename):
+        return path.join(self.env.gettext_dir, filename % self.code)
 
-    def has_xml(self):
-        return path.exists(self.xml_path)
+    def has_xml(self, filename):
+        return path.exists(self.xml_file(filename))
 
-    def has_po(self):
-        return path.exists(self.po_path)
+    def has_po(self, filename):
+        print self.po_file(filename)
+        return path.exists(self.po_file(filename))
 
     def __unicode__(self):
         return unicode(self.code)
@@ -96,25 +95,37 @@ def find_project_dir_and_config():
 LANG_DIR = re.compile(r'^values(?:-(\w\w)(?:-r(\w\w))?)?$')
 
 def collect_languages(resource_dir):
-    languages = {}
-    default_file = None
+    languages = [] 
+    files = []
     for name in os.listdir(resource_dir):
-        filename = path.join(resource_dir, name, 'strings.xml')
-        if not path.isfile(filename):
-            continue
         match = LANG_DIR.match(name)
         if not match:
             continue
+        filepath = path.join(resource_dir, name)
         country, region = match.groups()
         if country == None:
-            default_file = filename
+            for filename in ('strings.xml', 'arrays.xml'):
+                file = path.join(filepath, filename)
+                if path.isfile(file):
+                    files.append((file,
+                                  filename,
+                                  filename.split('.')[0]+"-%s.po",
+                                  filename.split('.')[0]+".pot"),
+                    )
         else:
             code = "%s" % country
             if region:
                 code += "_%s" % region
-            languages[code] = filename
+            languages.append(code)
 
-    return default_file, languages
+    # check how many files was found
+    # if there is only strings.xml, the new filename only
+    # consists of the language code because of the behavior
+    # of the first versions of android2po
+    if (len(files) == 1) and (files[0][1] == 'strings.xml'):
+        files = [(files[0][0], files[0][1], "%s.po", "template.pot")]
+
+    return files, languages
 
 
 class Environment(object):
@@ -130,7 +141,7 @@ class Environment(object):
 
     def __init__(self):
         self.languages = []
-        self.default_file = None
+        self.xmlfiles = []
         self.auto_gettext_dir = None
         self.auto_resource_dir = None
         self.resource_dir = None
@@ -208,10 +219,10 @@ class Environment(object):
                                    self.resource_dir)
 
         # Create an environment object based on all the data we have now.
-        default_file, languages = collect_languages(self.resource_dir)
-        if not default_file:
+        xmlfiles, languages = collect_languages(self.resource_dir)
+        if not xmlfiles:
             raise EnvironmentError('default language was not found.')
 
-        self.default_file = default_file
-        for code in languages.keys():
+        self.xmlfiles = xmlfiles
+        for code in languages:
             self.languages.append(Language(code, self))
