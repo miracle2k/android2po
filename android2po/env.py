@@ -42,7 +42,6 @@ class Language(object):
         return path.exists(self.xml_file(filename))
 
     def has_po(self, filename):
-        print self.po_file(filename)
         return path.exists(self.po_file(filename))
 
     def __unicode__(self):
