@@ -8,7 +8,7 @@ from os import path
 import argparse
 
 # Resist the temptation to use "*". It won't work on Python 2.5.
-from .commands import InitCommand, ExportCommand, ImportCommand
+from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
 from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
 
 
