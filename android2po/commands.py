@@ -163,10 +163,10 @@ class ExportCommand(BaseExportingCommand):
     def setup_arg_parser(cls, parser):
         group = parser.add_mutually_exclusive_group()
         group.add_argument('--initial', action='store_true',
-            help='Create .po files for new languages based their XML '+
+            help='create .po files for new languages based their XML '+
                   'files')
         group.add_argument('--overwrite', action='store_true',
-            help='Recreate .po files for all languages from their XML '+
+            help='recreate .po files for all languages from their XML '+
                  'counterparts')
 
     def execute(self):
