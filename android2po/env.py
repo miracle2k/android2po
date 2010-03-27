@@ -94,7 +94,7 @@ def find_project_dir_and_config():
 LANG_DIR = re.compile(r'^values(?:-(\w\w)(?:-r(\w\w))?)?$')
 
 def collect_languages(resource_dir):
-    languages = [] 
+    languages = []
     files = []
     for name in os.listdir(resource_dir):
         match = LANG_DIR.match(name)
@@ -145,6 +145,7 @@ class Environment(object):
         self.auto_resource_dir = None
         self.resource_dir = None
         self.gettext_dir = None
+        self.no_template = False
 
         # Try to determine if we are inside a project; if so, we a) might
         # find a configuration file, and b) can potentially assume some
@@ -196,25 +197,25 @@ class Environment(object):
         doing some basic validation. An ``EnvironmentError`` is thrown
         if there is something wrong.
         """
-        # If either of those is not specified, we can't continue. Raise a 
+        # If either of those is not specified, we can't continue. Raise a
         # special exception that let's the caller display the proper steps
         # on how to proceed.
         if not self.resource_dir or not self.gettext_dir:
             raise IncompleteEnvironment()
-        
-        # It's not enough for directories to be specified; they really 
-        # should exist as well. In particular, the locale/ directory is 
+
+        # It's not enough for directories to be specified; they really
+        # should exist as well. In particular, the locale/ directory is
         # not part of the standard Android tree and thus likely to not
         # exist yet, so we create it automatically, but ONLY if it wasn't
         # specified explicitely. If the user gave a specific location,
-        # it seems right to let him deal with it fully.        
+        # it seems right to let him deal with it fully.
         if not path.exists(self.gettext_dir) and self.auto_gettext_dir:
             os.makedirs(self.gettext_dir)
-        elif not path.exists(self.gettext_dir):            
-            raise EnvironmentError('Gettext directory at "%s" doesn\'t exist.' % 
+        elif not path.exists(self.gettext_dir):
+            raise EnvironmentError('Gettext directory at "%s" doesn\'t exist.' %
                                    self.gettext_dir)
         elif not path.exists(self.resource_dir):
-            raise EnvironmentError('Android resource direcory at "%s" doesn\'t exist.' % 
+            raise EnvironmentError('Android resource direcory at "%s" doesn\'t exist.' %
                                    self.resource_dir)
 
         # Create an environment object based on all the data we have now.

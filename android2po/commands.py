@@ -178,10 +178,12 @@ class ExportCommand(BaseExportingCommand):
         # merge subsequent updates in? Note this may affect the --initial
         # mode below, since it uses the template.
         for file, file_ext, file_po, file_pot in self.env.xmlfiles:
-            self.p("Generating %s" % file_pot)
+            if not env.no_template:
+                self.p("Generating %s" % file_pot)
             template_pot_file = path.join(env.gettext_dir, file_pot)
             default_po = xml2po(file)
-            write_catalog(template_pot_file, default_po)
+            if not env.no_template:
+                write_catalog(template_pot_file, default_po)
 
             if env.options.initial or env.options.overwrite:
                 for language in env.languages:

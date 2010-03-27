@@ -42,6 +42,11 @@ class Config:
          'dest': 'gettext_dir',
          'kwargs': {'metavar': 'DIR',}
         },
+        {'name': 'no-template',
+         'help': 'do not generate a .pot template file on export',
+         'dest': 'no_template',
+         'kwargs': {'action': 'store_true',}
+        },
     )
 
     @classmethod
