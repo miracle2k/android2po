@@ -172,12 +172,12 @@ class ExportCommand(BaseExportingCommand):
     def execute(self):
         env = self.env
 
-        # Update the template file in either case
-        # TODO: Should this really be generated in every case, or do we
-        # want to enable the user to set fixed meta data, and simply
-        # merge subsequent updates in? Note this may affect the --initial
-        # mode below, since it uses the template.
         for file, file_ext, file_po, file_pot in self.env.xmlfiles:
+            # Update the template file in either case
+            # TODO: Should this really be generated in every case, or do we
+            # want to enable the user to set fixed meta data, and simply
+            # merge subsequent updates in? Note this may affect the --initial
+            # mode below, since it uses the template.
             if not env.no_template:
                 self.p("Generating %s" % file_pot)
             template_pot_file = path.join(env.gettext_dir, file_pot)

@@ -94,6 +94,12 @@ def find_project_dir_and_config():
 LANG_DIR = re.compile(r'^values(?:-(\w\w)(?:-r(\w\w))?)?$')
 
 def collect_languages(resource_dir):
+    """Returns a 2-tuple with (files, languages).
+
+    ``files`` is a list of the different xml files in the main values/
+    directory (strings.xml, arrays.xml),  ``languages`` a list of language
+    codes.
+    """
     languages = []
     files = []
     for name in os.listdir(resource_dir):
@@ -103,6 +109,7 @@ def collect_languages(resource_dir):
         filepath = path.join(resource_dir, name)
         country, region = match.groups()
         if country == None:
+            # Processing the default values/ directory
             for filename in ('strings.xml', 'arrays.xml'):
                 file = path.join(filepath, filename)
                 if path.isfile(file):
@@ -117,10 +124,9 @@ def collect_languages(resource_dir):
                 code += "_%s" % region
             languages.append(code)
 
-    # check how many files was found
-    # if there is only strings.xml, the new filename only
-    # consists of the language code because of the behavior
-    # of the first versions of android2po
+    # Check if different xml files were found. If there is only a
+    # strings.xml, then we need to maintain compatibility with earlier
+    # android2po versions and output the .po files without prefix.
     if (len(files) == 1) and (files[0][1] == 'strings.xml'):
         files = [(files[0][0], files[0][1], "%s.po", "template.pot")]
 
