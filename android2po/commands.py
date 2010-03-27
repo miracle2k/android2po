@@ -93,7 +93,7 @@ class Command(CmdInterface):
         """
         self.env = env
 
-    def export(self):
+    def execute(self):
         raise NotImplementedError()
 
 
