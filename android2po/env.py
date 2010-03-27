@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import re
 from os import path
+from .config import Config
 
 
 __all__ = ('EnvironmentError', 'IncompleteEnvironment',
@@ -66,7 +67,7 @@ class DefaultLanguage(Language):
         return path.join(self.env.resource_dir, 'values/%s.xml' % kind)
 
     def po_file(self, kind):
-        template_name = self.env.template_name
+        template_name = self.env.config.template_name
         multiple_kinds = len(self.env.xmlfiles) > 1
 
         # If the template name configured by the user supports a variable,
@@ -174,44 +175,72 @@ class Environment(object):
         self.languages = []
         self.xmlfiles = []
         self.default = DefaultLanguage(self)
+        self.config = Config()
         self.auto_gettext_dir = None
         self.auto_resource_dir = None
         self.resource_dir = None
         self.gettext_dir = None
-        self.no_template = False
-        self.template_name = 'template.pot'
 
         # Try to determine if we are inside a project; if so, we a) might
         # find a configuration file, and b) can potentially assume some
         # default directory names.
         self.project_dir, self.config_file = find_project_dir_and_config()
 
-    def _pop_from(self, namespace, store_as):
+    def _pull_into(self, namespace, target):
+        """If for a value ``namespace`` there exists a corresponding
+        attribute on ``target``, then update that attribute with the
+        values from ``namespace``, and then remove the value from
+        ``namespace``.
+
+        This is needed because certain options, if passed on the command
+        line, need nevertheless to be stored in the ``self.config``
+        object. We therefore **pull** those values in, and return the
+        rest of the options.
+        """
         for name in dir(namespace):
             if name.startswith('_'):
                 continue
-            if name in self.__dict__:
-                # Attributes that already exist on our instance we would
-                # like to store here directly, i.e. make available as
-                # env.foo.
-                # All others will be at, for example, env.options.foo.
+            if name in target.__dict__:
+                setattr(target, name, getattr(namespace, name))
+                delattr(namespace, name)
+        return namespace
+
+    def _pull_into_self(self, namespace):
+        """This is essentially like ``self._pull_info``, but we pull
+        values into the environment object itself, and in order to avoid
+        conflicts between option values and attributes on the environment
+        (for example ``config``), we explicitly specify the values we're
+        interested in: It's the "big" ones which we would like to make
+        available on the environment object directly.
+        """
+        for name in ('resource_dir', 'gettext_dir'):
+            if hasattr(namespace, name):
                 setattr(self, name, getattr(namespace, name))
                 delattr(namespace, name)
-        setattr(self, store_as, namespace)
+        return namespace
 
-    def pop_from_options(self, options):
-        """Load the values we support into our attributes, remove them
-        from the ``options`` namespace, and store whatever is left in
-        ``self.options``.
+    def pop_from_options(self, argparse_namespace):
+        """Apply the set of options given on the command line.
+
+        These means that we need those options that are "configuration"
+        values to end up in ``self.config``. The normal options will
+        be made available as ``self.options``.
         """
-        self._pop_from(options, 'options')
+        rest = self._pull_into_self(argparse_namespace)
+        rest = self._pull_into(rest, self.config)
+        self.options = rest
 
-    def pop_from_config(self, config):
+    def pop_from_config(self, argparse_namespace):
         """Load the values we support into our attributes, remove them
         from the ``config`` namespace, and store whatever is left in
         ``self.config``.
         """
-        self._pop_from(config, 'config')
+        rest = self._pull_into_self(argparse_namespace)
+        rest = self._pull_into(rest, self.config)
+        # At this point, there shouldn't be anything left, because
+        # nothing should be included in the argparse result that we
+        # don't consider a configuration option.
+        assert not rest
 
     def auto_paths(self):
         """Try to auto-fill some path values that don't have values yet.

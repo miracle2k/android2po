@@ -10,6 +10,7 @@ import argparse
 # Resist the temptation to use "*". It won't work on Python 2.5.
 from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
 from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
+from .config import Config
 
 
 __all__ = ('main', 'run',)
@@ -20,70 +21,6 @@ COMMANDS = {
     'export': ExportCommand,
     'import': ImportCommand,
 }
-
-
-class Config:
-    # Defines all the values this config object supports, with the
-    # necessary meta data to both read them from an ini file and
-    # from command line arguments.
-    #
-    # Supported keys: name = name as both option and in config,
-    # help = short help text, dest - local attribute to store the value,
-    # default = default value, argparse_kwargs = additional arguments
-    # for the command line option.
-    OPTIONS = (
-        {'name': 'android',
-         'help': 'Android resource directory ($PROJECT/res by default)',
-         'dest': 'resource_dir',
-         'kwargs': {'metavar': 'DIR',}
-        },
-        {'name': 'gettext',
-         'help': 'directory containing the .po files ($PROJECT/locale by default)',
-         'dest': 'gettext_dir',
-         'kwargs': {'metavar': 'DIR',}
-        },
-        {'name': 'no-template',
-         'help': 'do not generate a .pot template file on export',
-         'dest': 'no_template',
-         'kwargs': {'action': 'store_true',}
-        },
-        {'name': 'template',
-         'help': 'filename to use for the .pot file(s); may contain %%s to be '+
-                 'replaced with the xml kind',
-         'dest': 'template_name',
-         'kwargs': {'metavar': 'NAME',}
-        },
-    )
-
-    @classmethod
-    def setup_arguments(cls, parser):
-        """Setup our configuration values as arguments in the ``argparse``
-        object in ``parser``.
-        """
-        for optdef in cls.OPTIONS:
-            names = ('--%s' % optdef.get('name'),)
-            kwargs = {
-                'help': optdef.get('help', None),
-                'dest': optdef.get('dest', None),
-                # We handle defaults ourselves. This
-                # is actually important, or defaults
-                # from one config source may override
-                # valid values from another.
-                'default': argparse.SUPPRESS,
-            }
-            kwargs.update(optdef.get('kwargs', {}))
-            parser.add_argument(*names, **kwargs)
-
-    @classmethod
-    def rebase_paths(cls, config, base_path):
-        """Make those config values that are paths relative to
-        ``base_path``, because by default, paths are relative to
-        the current working directory.
-        """
-        for name in ('gettext_dir', 'resource_dir'):
-            value = getattr(config, name, None)
-            if value is not None:
-                setattr(config, name, path.normpath(path.join(base_path, value)))
 
 
 def parse_args(argv):
