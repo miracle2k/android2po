@@ -86,7 +86,7 @@ class TempProject(object):
             f.close()
 
 
-class TestOptions:
+class ProgramTest(object):
 
     def setup_project(self):
         """Setup a fake Android project in a temporary directory
@@ -105,9 +105,12 @@ class TestOptions:
         for p in self.projects:
             p.delete()
 
-    def test_no_template(self):
-        """Template pot file can be disabled.
-        """
+
+class TestNoTemplate(ProgramTest):
+    """Template pot file can be disabled.
+    """
+
+    def test(self):
         # By default, a template file is created.
         p1 = self.setup_project()
         p1.program('export')
@@ -118,14 +121,17 @@ class TestOptions:
         p2.program('export', {'--no-template': True})
         assert_raises(IOError, p2.get_po, 'template.pot')
 
-    def test_template_name(self):
+
+class TestTemplateName(ProgramTest):
+
+    def test(self):
         """The name of the template file can be configured.
         """
         p = self.setup_project()
         p.program('export', {'--template': 'foobar1234.pot'})
         p.get_po('foobar1234.pot')
 
-    def test_template_name_with_var(self):
+    def test_with_var(self):
         """The name of the template file can contain a %s placeholder.
         If it does, it will be replaced by the name of the corresponding
         xml file, even if only a single kind of xml file is used.
