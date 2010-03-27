@@ -47,6 +47,12 @@ class Config:
          'dest': 'no_template',
          'kwargs': {'action': 'store_true',}
         },
+        {'name': 'template',
+         'help': 'filename to use for the .pot file(s); may contain %%s to be '+
+                 'replaced with the xml kind',
+         'dest': 'template_name',
+         'kwargs': {'metavar': 'NAME',}
+        },
     )
 
     @classmethod

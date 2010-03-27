@@ -99,22 +99,25 @@ class Command(CmdInterface):
 
 class BaseExportingCommand(Command):
 
-    def generate_po(self, language):
+    def generate_po(self, language, kind):
         """Helper to generate a .po file.
         """
-        self.p("Generating %s.po...\n" % language.code, nl=False)
-        for file, file_ext, file_po, file_pot in self.env.xmlfiles:
-            lang_po, unmatched = xml2po(file, language.xml_file(file_ext))
-            write_catalog(language.po_file(file_po), lang_po)
-            self.p("%s: %d strings processed, %d translated." % (
-                file_ext,
-                # Make sure we don't count the header.
-                len(lang_po),
-                len([m for m in lang_po if m.string and m.id])))
-            if unmatched:
-                 self.i("Warning: xml for %s contains strings "
-                        "not found in default file: %s" % (
-                            language.code, ", ".join(unmatched)))
+        self.p("Generating .po for %s/%s..." % (language.code, kind), nl=False)
+        if language.has_xml(kind):
+            lang_po, unmatched = xml2po(
+                self.env.default.xml_file(kind), language.xml_file(kind))
+        else:
+            lang_po = xml2po(self.env.default.xml_file(kind))
+            unmatched = False
+        write_catalog(language.po_file(kind), lang_po)
+        self.p("%d strings processed, %d translated." % (
+            # Make sure we don't count the header.
+            len(lang_po),
+            len([m for m in lang_po if m.string and m.id])))
+        if unmatched:
+            self.i("Warning: %s.xml for %s contains strings "
+                   "not found in default file: %s" % (
+                       kind, language.code, ", ".join(unmatched)))
 
 
 class InitCommand(BaseExportingCommand):
@@ -137,22 +140,22 @@ class InitCommand(BaseExportingCommand):
         else:
             languages = env.languages
 
-        for language in languages:
-            for file, file_ext, file_po, file_pot in self.env.xmlfiles:
-                if not language.has_xml(file_ext):
-                    dir = path.dirname(language.xml_file(file_ext))
+        for kind in env.xmlfiles:
+            for language in languages:
+                if not language.has_xml(kind):
+                    dir = path.dirname(language.xml_file(kind))
                     if not path.exists(dir):
                         os.makedirs(dir)
-                    f = open(language.xml_file(file_ext), 'wb')
+                    f = open(language.xml_file(kind), 'wb')
                     try:
                         f.write("""<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""")
                     finally:
                         f.close()
 
-                if path.exists(language.po_file(file_po)):
-                    self.i("%s exists, skipping." % (file_po % language.code))
+                if path.exists(language.po_file(kind)):
+                    self.i("%s exists, skipping." % (language.po_file(kind)))
                 else:
-                    self.generate_po(language)
+                    self.generate_po(language, kind)
 
 
 class ExportCommand(BaseExportingCommand):
@@ -172,45 +175,49 @@ class ExportCommand(BaseExportingCommand):
     def execute(self):
         env = self.env
 
-        for file, file_ext, file_po, file_pot in self.env.xmlfiles:
+        for kind in self.env.xmlfiles:
             # Update the template file in either case
             # TODO: Should this really be generated in every case, or do we
             # want to enable the user to set fixed meta data, and simply
             # merge subsequent updates in? Note this may affect the --initial
             # mode below, since it uses the template.
+            template_pot_name = self.env.default.po_file(kind)
             if not env.no_template:
-                self.p("Generating %s" % file_pot)
-            template_pot_file = path.join(env.gettext_dir, file_pot)
-            default_po = xml2po(file)
+                self.p("Generating %s" % template_pot_name)
+            template_pot_file = path.join(env.gettext_dir, template_pot_name)
+            default_po = xml2po(self.env.default.xml_file(kind))
             if not env.no_template:
                 write_catalog(template_pot_file, default_po)
 
-            if env.options.initial or env.options.overwrite:
-                for language in env.languages:
-                    if language.has_po(file_po) and not env.options.overwrite:
-                        self.i("%s exists, skipping." % file_po)
+        if env.options.initial or env.options.overwrite:
+            for language in env.languages:
+                for kind in self.env.xmlfiles:
+                    if language.has_po(kind) and not env.options.overwrite:
+                        self.i("%s exists, skipping." % language.po_file(kind))
                     else:
-                        self.generate_po(language)
+                        self.generate_po(language, kind)
 
-            else:
-                for language in env.languages:
-                    if not language.has_po(file_po):
-                        self.i("Warning: Skipping %s, .po file doesn't exist. "
-                               "Use --initial." % language.code)
+        else:
+            for language in env.languages:
+                for kind in self.env.xmlfiles:
+                    if not language.has_po(kind):
+                        self.i(("Warning: Skipping %s.xml for %s, .po file "
+                                "doesn't exist. Use --initial.") % (
+                                   kind, language.code))
                         continue
 
-                    self.p("Processing %s" % language.code)
+                    self.p("Processing %s: %s" % (language.code, kind))
                     # If we do not provide a locale, babel will consider this
                     # catalog a template and always write out the default
                     # header. It seemingly does not consider the "Language"
                     # header inside the file at all, and indeed deletes it.
                     # TODO: It deletes all headers it doesn't know, and
                     # overrides others. That sucks.
-                    lang_po = read_catalog(language.po_file(file_po),
+                    lang_po = read_catalog(language.po_file(kind),
                         locale=language.code)
                     lang_po.update(default_po)
                     # TODO: Should we include previous?
-                    write_catalog(language.po_file(file_po),
+                    write_catalog(language.po_file(kind),
                         lang_po, include_previous=False)
 
 
@@ -219,13 +226,14 @@ class ImportCommand(Command):
     """
 
     def execute(self):
-        for file, file_ext, file_po, file_pot in self.env.xmlfiles:
-            for language in self.env.languages:
-                if not path.exists(language.po_file(file_po)):
-                    self.i("Warning: Skipping %s, .po file doesn't exist." % language.code)
+        for language in self.env.languages:
+            for kind in self.env.xmlfiles:
+                if not language.has_po(kind):
+                    self.i("Warning: Skipping %s/%s, .po file doesn't exist." % (
+                        language.code, kind))
                     continue
-                po_file = language.po_file(file_po)
-                self.p("Processing %s" % po_file)
 
-                xml_dom = po2xml(read_catalog(po_file))
-                write_xml(language.xml_file(file_ext), xml_dom)
+                po_filename = language.po_file(kind)
+                self.p("Processing %s" % po_filename)
+                xml_dom = po2xml(read_catalog(po_filename))
+                write_xml(language.xml_file(kind), xml_dom)

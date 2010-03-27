@@ -25,7 +25,7 @@ class Language(object):
         self.code = code
         self.env = env
 
-    def xml_file(self, filename):
+    def xml_file(self, kind):
         # Android uses a special language code format for the region part
         parts = tuple(self.code.split('_', 2))
         if len(parts) == 2:
@@ -33,19 +33,55 @@ class Language(object):
         else:
             android_code = "%s" % parts
         return path.join(self.env.resource_dir,
-                         'values-%s/%s' % (android_code, filename))
+                         'values-%s/%s.xml' % (android_code, kind))
 
-    def po_file(self, filename):
-        return path.join(self.env.gettext_dir, filename % self.code)
+    def po_file(self, kind):
+        filename = '%s.po' % self.code
+        if len(self.env.xmlfiles) > 1:
+            filename = "%s-%s" % (kind, filename)
+        return path.join(self.env.gettext_dir, filename)
 
-    def has_xml(self, filename):
-        return path.exists(self.xml_file(filename))
+    def has_xml(self, kind):
+        return path.exists(self.xml_file(kind))
 
-    def has_po(self, filename):
-        return path.exists(self.po_file(filename))
+    def has_po(self, kind):
+        return path.exists(self.po_file(kind))
 
     def __unicode__(self):
         return unicode(self.code)
+
+
+class DefaultLanguage(Language):
+    """A special version of ``Language``, representing the default
+    language.
+
+    For the Android side, this means the XML files in the values/
+    directory. For the gettext side, it means the .pot file(s).
+    """
+
+    def __init__(self, env):
+        super(DefaultLanguage, self).__init__('<def>', env)
+
+    def xml_file(self, kind):
+        return path.join(self.env.resource_dir, 'values/%s.xml' % kind)
+
+    def po_file(self, kind):
+        template_name = self.env.template_name
+        multiple_kinds = len(self.env.xmlfiles) > 1
+
+        # If the template name configured by the user supports a variable,
+        # then always insert the kind in it's place.
+        if '%s' in template_name:
+            filename = template_name % kind
+        else:
+            # Otherwise, if there are multiple kinds, use the current
+            # kind as a prefix to differentiate (i.e. arrays-template.pot).
+            if multiple_kinds:
+                filename = "%s-%s" % (kind, template_name)
+            else:
+                # Otherwise, we're fine with just the template name alone.
+                filename = template_name
+        return path.join(self.env.gettext_dir, filename)
 
 
 def find_project_dir_and_config():
@@ -113,22 +149,12 @@ def collect_languages(resource_dir):
             for filename in ('strings.xml', 'arrays.xml'):
                 file = path.join(filepath, filename)
                 if path.isfile(file):
-                    files.append((file,
-                                  filename,
-                                  filename.split('.')[0]+"-%s.po",
-                                  filename.split('.')[0]+".pot"),
-                    )
+                    files.append(path.splitext(filename)[0])
         else:
             code = "%s" % country
             if region:
                 code += "_%s" % region
             languages.append(code)
-
-    # Check if different xml files were found. If there is only a
-    # strings.xml, then we need to maintain compatibility with earlier
-    # android2po versions and output the .po files without prefix.
-    if (len(files) == 1) and (files[0][1] == 'strings.xml'):
-        files = [(files[0][0], files[0][1], "%s.po", "template.pot")]
 
     return files, languages
 
@@ -147,11 +173,13 @@ class Environment(object):
     def __init__(self):
         self.languages = []
         self.xmlfiles = []
+        self.default = DefaultLanguage(self)
         self.auto_gettext_dir = None
         self.auto_resource_dir = None
         self.resource_dir = None
         self.gettext_dir = None
         self.no_template = False
+        self.template_name = 'template.pot'
 
         # Try to determine if we are inside a project; if so, we a) might
         # find a configuration file, and b) can potentially assume some
@@ -225,10 +253,10 @@ class Environment(object):
                                    self.resource_dir)
 
         # Create an environment object based on all the data we have now.
-        xmlfiles, languages = collect_languages(self.resource_dir)
-        if not xmlfiles:
+        files, languages = collect_languages(self.resource_dir)
+        if not files:
             raise EnvironmentError('default language was not found.')
 
-        self.xmlfiles = xmlfiles
+        self.xmlfiles = files
         for code in languages:
             self.languages.append(Language(code, self))

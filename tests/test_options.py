@@ -117,3 +117,19 @@ class TestOptions:
         p2 = self.setup_project()
         p2.program('export', {'--no-template': True})
         assert_raises(IOError, p2.get_po, 'template.pot')
+
+    def test_template_name(self):
+        """The name of the template file can be configured.
+        """
+        p = self.setup_project()
+        p.program('export', {'--template': 'foobar1234.pot'})
+        p.get_po('foobar1234.pot')
+
+    def test_template_name_with_var(self):
+        """The name of the template file can contain a %s placeholder.
+        If it does, it will be replaced by the name of the corresponding
+        xml file, even if only a single kind of xml file is used.
+        """
+        p = self.setup_project()
+        p.program('export', {'--template': 'foobar-%s-1234.pot'})
+        p.get_po('foobar-strings-1234.pot')
