@@ -3,6 +3,11 @@ similar to how compress does:
     [mkdir] ../locale
     ...
 
+Add some kind of variation on the init command that would automatically
+install a config file if it doesn't exist. Maybe we could to this if init
+is called without any .po files existing yet, and without a specific
+language being requested.
+
 Option to ignore fuzzy strings on import.
 
 Options we would like to support:
