@@ -348,13 +348,15 @@ class ExportCommand(InitCommand):
 			                 lang_data, lang_files)
 
         else:
+	    initial_warning = False
+
             for language in env.languages:
                 for kind in self.env.xmlfiles:
 		    target_po = language.po(kind)
                     if not target_po.exists():
 			w.action('skipped', target_po)
-			w.message('File does not exist yet. Use --initial',
-			          'warning')
+			w.message('File does not exist yet. Use --initial')
+			initial_warning = True
                         continue
 
                     action = w.begin(target_po)
@@ -376,6 +378,12 @@ class ExportCommand(InitCommand):
 			write_file(self, target_po,
 			           catalog2string(lang_catalog, include_previous=False),
 			           action=action)
+
+	    if initial_warning:
+		print ""
+		print "Warning: One or more .po files were skipped because "+\
+		      "they did not exist yet. Use 'export --initial' to "+\
+		      "generate them for the first time."
 
 
 class ImportCommand(Command):
