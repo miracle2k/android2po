@@ -300,20 +300,9 @@ class InitCommand(Command):
 class ExportCommand(InitCommand):
     """The export command.
 
-    Through the --initial flag it shares some functionality with
-    the init command, so we inherit from it to be able to use
-    some shared methods.
+    Inherits from ``InitCommand`` to be able to use ``generate_templates``.
+    Both commands need to write the templates.
     """
-
-    @classmethod
-    def setup_arg_parser(cls, parser):
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument('--initial', action='store_true',
-            help='create .po files for new languages based their XML '+
-                  'files')
-        group.add_argument('--overwrite', action='store_true',
-            help='recreate .po files for all languages from their XML '+
-                 'counterparts')
 
     def execute(self):
         env = self.env
@@ -325,65 +314,46 @@ class ExportCommand(InitCommand):
 	#
         # TODO: Should this really be generated in every case, or do we
         # want to enable the user to set fixed meta data, and simply
-        # merge subsequent updates in? Note this may affect the --initial
-        # mode below, since it uses the template.
+        # merge subsequent updates in? 
 	default_catalogs, _ = self.generate_templates()
 
-        if env.options.initial or env.options.overwrite:
-	    # In overwrite or initial mode, we (re)generate .po files
-	    # based on any existing localized xml resources.
-	    for language in env.languages:
-		for (target_po,
-	             template_data,
-	             lang_data,
-	             lang_files) in self._iterate(language):
-		    if target_po.exists() and not env.options.overwrite:
-			# We are in --initial mode, and the file exists;
-			# We have nothing to do.
-			w.action('exists', target_po)
-		    else:
-			# The file either doesnt yet exist, or we are in
-			# overwrite mode. Generate it in any case.
-			self.generate_po(target_po, template_data,
-			                 lang_data, lang_files)
+	initial_warning = False
 
-        else:
-	    initial_warning = False
+	for language in env.languages:
+	    for kind in self.env.xmlfiles:
+		target_po = language.po(kind)
+		if not target_po.exists():
+		    w.action('skipped', target_po)
+		    w.message('File does not exist yet. '+
+		              'Use the \'init\' command.')
+		    initial_warning = True
+		    continue
 
-            for language in env.languages:
-                for kind in self.env.xmlfiles:
-		    target_po = language.po(kind)
-                    if not target_po.exists():
-			w.action('skipped', target_po)
-			w.message('File does not exist yet. Use --initial')
-			initial_warning = True
-                        continue
+		action = w.begin(target_po)
+		# If we do not provide a locale, babel will consider this
+		# catalog a template and always write out the default
+		# header. It seemingly does not consider the "Language"
+		# header inside the file at all, and indeed deletes it.
+		# TODO: It deletes all headers it doesn't know, and
+		# overrides others. That sucks.
+		try:
+		    lang_catalog = read_catalog(target_po, locale=language.code)
+		except UnknownLocaleError:
+		    action.message('%s is not a valid locale code' % language.code,
+		                   'error')
+		    action.done('failed')
+		else:
+		    lang_catalog.update(default_catalogs[kind])
+		    # TODO: Should we include previous?
+		    write_file(self, target_po,
+		               catalog2string(lang_catalog, include_previous=False),
+		               action=action)
 
-                    action = w.begin(target_po)
-                    # If we do not provide a locale, babel will consider this
-                    # catalog a template and always write out the default
-                    # header. It seemingly does not consider the "Language"
-                    # header inside the file at all, and indeed deletes it.
-                    # TODO: It deletes all headers it doesn't know, and
-                    # overrides others. That sucks.
-		    try:
-			lang_catalog = read_catalog(target_po, locale=language.code)
-		    except UnknownLocaleError:
-			action.message('%s is not a valid locale code' % language.code,
-			               'error')
-			action.done('failed')
-		    else:
-			lang_catalog.update(default_catalogs[kind])
-			# TODO: Should we include previous?
-			write_file(self, target_po,
-			           catalog2string(lang_catalog, include_previous=False),
-			           action=action)
-
-	    if initial_warning:
-		print ""
-		print "Warning: One or more .po files were skipped because "+\
-		      "they did not exist yet. Use 'export --initial' to "+\
-		      "generate them for the first time."
+	if initial_warning:
+	    print ""
+	    print "Warning: One or more .po files were skipped because "+\
+	          "they did not exist yet. Use the 'init' command to "+\
+	          "generate them for the first time."
 
 
 class ImportCommand(Command):
