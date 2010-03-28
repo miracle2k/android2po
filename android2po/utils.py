@@ -10,6 +10,8 @@ __all__ = ('Path', 'Writer', 'file_md5')
 
 
 def file_md5(filename):
+    """Generate the md5 hash of the given file.
+    """
     h = md5()
     f = open(filename, 'rb')
     try:
@@ -22,6 +24,7 @@ def file_md5(filename):
         return h.digest()
     finally:
         f.close()
+
 
 class Path(unicode):
     """Helper representing a filesystem path that can be "bound" to a base
@@ -38,6 +41,8 @@ class Path(unicode):
 
     @property
     def rel(self):
+        """Return this path relative to the base it was bound to.
+        """
         base =  self.base or os.getcwd()
         if not hasattr(path, 'relpath'):
             # Python < 2.6 doesn't have relpath, and I don't want
@@ -115,6 +120,10 @@ class Writer():
             dict.__setitem__(self, name, value)
 
         def done(self, event, *more, **data):
+            """Mark this action as done. This will cause it and it's
+            current messages to be printed, provided they pass the
+            verbosity threshold, of course.
+            """
             assert event in Writer.EVENTS, 'Not a valid event type'
             self['event'] = event
             self.update(*more, **data)
@@ -124,6 +133,8 @@ class Writer():
             self.is_done = True
 
         def update(self, text=None, severity=None, **more_data):
+            """Update the message with the given data.
+            """
             if text:
                 self['text'] = text
             if severity:
@@ -165,11 +176,22 @@ class Writer():
         return action
 
     def begin(self, *a, **kw):
+        """Begin a new action, and return it. The action will not be
+        printed until you call ``done()`` on it.
+
+        In the meantime, you can attach message to it though, which will
+        be printed together with the action once it is "done".
+        """
         action = Writer.Action(self, *a, **kw)
         self._pending_actions.append(action)
         return action
 
     def message(self, *a, **kw):
+        """Attach a message to the last action to be completed. This
+        includes actions that have not yet been printed (due to not
+        passing the threshold), but does not include actions that are
+        not yet marked as 'done'.
+        """
         self._current_action.message(*a, **kw)
 
     def finish(self):
@@ -225,4 +247,3 @@ class Writer():
 
     def _print_message(self, message):
         print " "*(self.max_event_len+1) + u"- %s" % message
-
