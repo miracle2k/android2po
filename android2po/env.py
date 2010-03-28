@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import os
 import re
+from argparse import Namespace
 from os import path
 from .config import Config
 from .utils import Path
@@ -235,7 +236,8 @@ class Environment(object):
         # At this point, there shouldn't be anything left, because
         # nothing should be included in the argparse result that we
         # don't consider a configuration option.
-        assert not rest
+        ns = Namespace()
+        assert rest == ns
 
     def auto_paths(self):
         """Try to auto-fill some path values that don't have values yet.
