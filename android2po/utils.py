@@ -1,9 +1,27 @@
 import os
+try:
+    from hashlib import md5
+except ImportError:
+   import md5
 from os import path
 
 
-__all__ = ('Path', 'Writer',)
+__all__ = ('Path', 'Writer', 'file_md5')
 
+
+def file_md5(filename):
+    h = md5()
+    f = open(filename, 'rb')
+    try:
+        while True:
+            # 128 is the md5 digest blocksize
+            data = f.read(128*10)
+            if not data:
+                break
+            h.update(data)
+        return h.digest()
+    finally:
+        f.close()
 
 class Path(unicode):
     """Helper representing a filesystem path that can be "bound" to a base
@@ -41,6 +59,9 @@ class Path(unicode):
     @property
     def dir(self):
         return Path(path.dirname(self), base=self.base)
+
+    def hash(self):
+        return file_md5(self)
 
 
 class Writer():

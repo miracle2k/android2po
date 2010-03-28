@@ -84,9 +84,14 @@ def write_file(cmd, filename, content, update=True, action=None):
     if not action:
 	action = cmd.w.begin(filename)
 
-    if not update and filename.exists():
-        cmd.w.action('exists', filename)
-        return
+    if filename.exists():
+	if not update:
+	    action.done('exists')
+	    return
+	else:
+	    old_hash = filename.hash()
+    else:
+	old_hash = None
 
     ensure_directories(cmd, filename.dir)
 
@@ -97,7 +102,16 @@ def write_file(cmd, filename, content, update=True, action=None):
     finally:
         f.close()
 
-    action.done('updated')
+    if old_hash is None:
+	action.done('created')
+    elif old_hash != filename.hash():
+	action.done('updated')
+    else:
+	# Note that this is merely for user information. We
+	# nevertheless wrote a new version of the file, we can't
+	# actually determine a change without generating the new
+	# version.
+	action.done('unchanged')
 
 
 class Command(object):
