@@ -60,10 +60,10 @@ def ensure_directories(cmd, path):
     # every single directory created.
     needs_creating = []
     while not path.exists():
-	if path in needs_creating:
-	    break
-	needs_creating.append(path)
-	path = path.dir
+        if path in needs_creating:
+            break
+        needs_creating.append(path)
+        path = path.dir
 
     for path in reversed(needs_creating):
         cmd.w.action('mkdir', path)
@@ -88,41 +88,41 @@ def write_file(cmd, filename, content, update=True, action=None,
     filename as the text.
     """
     if not action:
-	action = cmd.w.begin(filename)
+        action = cmd.w.begin(filename)
 
     if filename.exists():
-	if not update:
-	    if ignore_exists:
-		# Downgade level of this message
-		action.update(severity='info')
-	    action.done('exists')
-	    return False
-	else:
-	    old_hash = filename.hash()
+        if not update:
+            if ignore_exists:
+                # Downgade level of this message
+                action.update(severity='info')
+            action.done('exists')
+            return False
+        else:
+            old_hash = filename.hash()
     else:
-	old_hash = None
+        old_hash = None
 
     ensure_directories(cmd, filename.dir)
 
     f = open(filename, 'wb')
     try:
-	if callable(content):
-	    content = content()
+        if callable(content):
+            content = content()
         f.write(content)
-	f.flush()
+        f.flush()
     finally:
         f.close()
 
     if old_hash is None:
-	action.done('created')
+        action.done('created')
     elif old_hash != filename.hash():
-	action.done('updated')
+        action.done('updated')
     else:
-	# Note that this is merely for user information. We
-	# nevertheless wrote a new version of the file, we can't
-	# actually determine a change without generating the new
-	# version.
-	action.done('unchanged')
+        # Note that this is merely for user information. We
+        # nevertheless wrote a new version of the file, we can't
+        # actually determine a change without generating the new
+        # version.
+        action.done('unchanged')
     return True
 
 
@@ -151,112 +151,112 @@ class InitCommand(Command):
     @classmethod
     def setup_arg_parser(cls, parser):
         parser.add_argument('language', nargs='*',
-            help='Language code to initialize. If none given, all '+
-                 'languages lacking a .po file will be initialized.')
+                            help='Language code to initialize. If none given, all '+
+                            'languages lacking a .po file will be initialized.')
 
     def generate_templates(self, update=True):
-	"""Generate the .pot templates. Returns the catalog objects as a
-	kind -> catalog dict.
+        """Generate the .pot templates. Returns the catalog objects as a
+        kind -> catalog dict.
 
-	TODO: Write a test that this happens during both the "export"
-	and the "init" command (the latter is new).
-	"""
-	env = self.env
-	default_catalogs = {}
-	something_written = False
+        TODO: Write a test that this happens during both the "export"
+        and the "init" command (the latter is new).
+        """
+        env = self.env
+        default_catalogs = {}
+        something_written = False
         for kind in self.env.xmlfiles:
             template_pot = self.env.default.po(kind)
             if not env.config.no_template:
                 action = self.w.begin(template_pot)
             default_catalog = xml2po(self.env.default.xml(kind))
-	    default_catalogs[kind] = default_catalog
+            default_catalogs[kind] = default_catalog
             if not env.config.no_template:
-		# Note that this is always rendered with "ignore_exists",
-		# i.e. we only log this action if we change the template.
-		if write_file(self, template_pot,
-	                      content=lambda: catalog2string(default_catalog),
-	                      action=action, ignore_exists=True, update=update):
-		    something_written = True
-	return default_catalogs, something_written
+                # Note that this is always rendered with "ignore_exists",
+                # i.e. we only log this action if we change the template.
+                if write_file(self, template_pot,
+                              content=lambda: catalog2string(default_catalog),
+                              action=action, ignore_exists=True, update=update):
+                    something_written = True
+        return default_catalogs, something_written
 
     def generate_po(self, target_po_file, default_data, language_data=None,
                     language_data_files=None, update=True, ignore_exists=False):
         """Helper to generate a .po file.
 
-	``default_data`` is the collective data from the language neutral XML
-	files, and this is what the .po we generate will be based on.
+        ``default_data`` is the collective data from the language neutral XML
+        files, and this is what the .po we generate will be based on.
 
-	``language_data`` is collective data from the corresponding
-	language-specific XML files, in case such data is available.
+        ``language_data`` is collective data from the corresponding
+        language-specific XML files, in case such data is available.
 
-	``language_data_files`` is the list of files that ``language_data``
-	is based upon. This is because in some cases multiple XML files
-	might need to be combined into one gettext catalog.
+        ``language_data_files`` is the list of files that ``language_data``
+        is based upon. This is because in some cases multiple XML files
+        might need to be combined into one gettext catalog.
 
         If ``update`` is not set than we will bail out early
         if the file doesn't exist.
-	"""
+        """
         action = self.w.begin(target_po_file)
 
-	# This is a function so that it only will be run if write_file()
-	# actually needs it.
+        # This is a function so that it only will be run if write_file()
+        # actually needs it.
         def make_catalog():
-	    if language_data is not None:
-		action.message('Using existing translations from %s' % ", ".join(
-		    [l.rel for l in language_data_files]))
-		lang_catalog, unmatched = xml2po(default_data, language_data)
-		if unmatched:
-		    action.message("Existing translation XML files for this "
-			           "language contains strings not found in the "
-			           "default XML files: %s" % (", ".join(unmatched)))
-	    else:
-		action.message('No corresponding XML exists, generating catalog '+
-		               'without translations')
-		lang_catalog = xml2po(default_data)
+            if language_data is not None:
+                action.message('Using existing translations from %s' % ", ".join(
+                    [l.rel for l in language_data_files]))
+                lang_catalog, unmatched = xml2po(default_data, language_data)
+                if unmatched:
+                    action.message("Existing translation XML files for this "
+                                   "language contains strings not found in the "
+                                   "default XML files: %s" % (", ".join(unmatched)))
+            else:
+                action.message('No corresponding XML exists, generating catalog '+
+                               'without translations')
+                lang_catalog = xml2po(default_data)
 
-	    catalog = catalog2string(lang_catalog)
+            catalog = catalog2string(lang_catalog)
 
-	    # Make sure we don't count the header
-	    num_translated = len([m for m in lang_catalog if m.string and m.id])
-	    num_total = len(lang_catalog)
-	    action.message("%d strings processed, %d translated." % (
-		num_total, num_translated))
-	    return catalog
+            # Make sure we don't count the header
+            num_translated = len([m for m in lang_catalog if m.string and m.id])
+            num_total = len(lang_catalog)
+            action.message("%d strings processed, %d translated." % (
+                num_total, num_translated))
+            return catalog
 
-	return write_file(self, target_po_file, content=make_catalog,
-	                  action=action, update=update,
-	                  ignore_exists=ignore_exists)
+        return write_file(self, target_po_file, content=make_catalog,
+                          action=action, update=update,
+                          ignore_exists=ignore_exists)
 
     def _iterate(self, language, require_translation=True):
-	"""Yield 4-tuples in the form of: (
-	    target .po file,
-	    source xml data,
-	    translated xml data,
-	    list of files translated xml data was read from
-	)
+        """Yield 4-tuples in the form of: (
+            target .po file,
+            source xml data,
+            translated xml data,
+            list of files translated xml data was read from
+        )
 
-	This is implemeted as a separate iterator so that later on we can
-	also support a mechanism in which multiple xml files are stored in
-	one .po file, i.e. on export, multiple xml files needs to be able
-	to yield into a single .po target.
-	"""
+        This is implemeted as a separate iterator so that later on we can
+        also support a mechanism in which multiple xml files are stored in
+        one .po file, i.e. on export, multiple xml files needs to be able
+        to yield into a single .po target.
+        """
         for kind in self.env.xmlfiles:
-	    language_po = language.po(kind)
-	    language_xml = language.xml(kind)
+            language_po = language.po(kind)
+            language_xml = language.xml(kind)
 
-	    language_data = None
-	    if not language_xml.exists():
-		if require_translation:
-		    # It's easily possible that say a arrays.xml only
-		    # exists in values/, but not in values-xx/.
-		    self.w.action('skipped', language_po)
-		    self.w.message('%s doesn\'t exist' % language_po.rel)
-		    continue
-	    else:
-		language_data = read_xml(language_xml)
+            language_data = None
+            if not language_xml.exists():
+                if require_translation:
+                    # It's easily possible that say a arrays.xml only
+                    # exists in values/, but not in values-xx/.
+                    self.w.action('skipped', language_po)
+                    self.w.message('%s doesn\'t exist' % language_po.rel)
+                    continue
+            else:
+                language_data = read_xml(language_xml)
 
-	    template_data = read_xml(self.env.default.xml(kind))
-	    yield language_po, template_data, language_data, [language_xml]
+            template_data = read_xml(self.env.default.xml(kind))
+            yield language_po, template_data, language_data, [language_xml]
 
     def execute(self):
         env = self.env
@@ -268,36 +268,36 @@ class InitCommand(Command):
         else:
             languages = env.languages
 
-	# First, make sure the templates exist. This makes the "init"
-	# command everything needed to boostrap.
-	_, something_done = self.generate_templates(update=False)
+        # First, make sure the templates exist. This makes the "init"
+        # command everything needed to boostrap.
+        _, something_done = self.generate_templates(update=False)
 
-	# Only show [exists] actions if a specific language was requested.
-	show_exists = not bool(env.options.language)
+        # Only show [exists] actions if a specific language was requested.
+        show_exists = not bool(env.options.language)
 
         for language in languages:
-	    # For each language, generate a .po file. In case a language
-	    # already exists (that is, it's xml files exist, use the
-	    # existing translations for the new gettext catalog).
+            # For each language, generate a .po file. In case a language
+            # already exists (that is, it's xml files exist, use the
+            # existing translations for the new gettext catalog).
             for (target_po,
-	         template_data,
-	         lang_data,
-	         lang_files) in self._iterate(language, require_translation=False):
+                 template_data,
+                 lang_data,
+                 lang_files) in self._iterate(language, require_translation=False):
                 if self.generate_po(target_po, template_data, lang_data, lang_files,
-		                    update=False,
-		                    ignore_exists=show_exists):
-		    something_done = True
+                                    update=False,
+                                    ignore_exists=show_exists):
+                    something_done = True
 
-	    # Also for each language, generate the empty .xml resource files.
-	    # This will make us pick up the language on subsequent runs.
-	    for kind in self.env.xmlfiles:
+            # Also for each language, generate the empty .xml resource files.
+            # This will make us pick up the language on subsequent runs.
+            for kind in self.env.xmlfiles:
                 if write_file(self, language.xml(kind),
                               """<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""",
-		              update=False, ignore_exists=show_exists):
-		    something_done = True
+                              update=False, ignore_exists=show_exists):
+                    something_done = True
 
-	if not something_done:
-	    self.w.action('info', 'Nothing to do.', 'default')
+        if not something_done:
+            self.w.action('info', 'Nothing to do.', 'default')
 
 
 class ExportCommand(InitCommand):
@@ -311,50 +311,50 @@ class ExportCommand(InitCommand):
         env = self.env
         w = self.w
 
-	# First, always update the template files. Note that even if
-	# template generation is disabled, we still need to have the
-	# catalogs at least in memory for the updating process later on.
-	#
+        # First, always update the template files. Note that even if
+        # template generation is disabled, we still need to have the
+        # catalogs at least in memory for the updating process later on.
+        #
         # TODO: Should this really be generated in every case, or do we
         # want to enable the user to set fixed meta data, and simply
         # merge subsequent updates in?
-	default_catalogs, _ = self.generate_templates()
+        default_catalogs, _ = self.generate_templates()
 
-	initial_warning = False
+        initial_warning = False
 
-	for language in env.languages:
-	    for kind in self.env.xmlfiles:
-		target_po = language.po(kind)
-		if not target_po.exists():
-		    w.action('skipped', target_po)
-		    w.message('File does not exist yet. '+
-		              'Use the \'init\' command.')
-		    initial_warning = True
-		    continue
+        for language in env.languages:
+            for kind in self.env.xmlfiles:
+                target_po = language.po(kind)
+                if not target_po.exists():
+                    w.action('skipped', target_po)
+                    w.message('File does not exist yet. '+
+                              'Use the \'init\' command.')
+                    initial_warning = True
+                    continue
 
-		action = w.begin(target_po)
-		# If we do not provide a locale, babel will consider this
-		# catalog a template and always write out the default
-		# header. It seemingly does not consider the "Language"
-		# header inside the file at all, and indeed deletes it.
-		# TODO: It deletes all headers it doesn't know, and
-		# overrides others. That sucks.
-		try:
-		    lang_catalog = read_catalog(target_po, locale=language.code)
-		except UnknownLocaleError:
-		    action.done('failed', status='%s is not a valid locale' % language.code)
-		else:
-		    lang_catalog.update(default_catalogs[kind])
-		    # TODO: Should we include previous?
-		    write_file(self, target_po,
-		               catalog2string(lang_catalog, include_previous=False),
-		               action=action)
+                action = w.begin(target_po)
+                # If we do not provide a locale, babel will consider this
+                # catalog a template and always write out the default
+                # header. It seemingly does not consider the "Language"
+                # header inside the file at all, and indeed deletes it.
+                # TODO: It deletes all headers it doesn't know, and
+                # overrides others. That sucks.
+                try:
+                    lang_catalog = read_catalog(target_po, locale=language.code)
+                except UnknownLocaleError:
+                    action.done('failed', status='%s is not a valid locale' % language.code)
+                else:
+                    lang_catalog.update(default_catalogs[kind])
+                    # TODO: Should we include previous?
+                    write_file(self, target_po,
+                               catalog2string(lang_catalog, include_previous=False),
+                               action=action)
 
-	if initial_warning:
-	    print ""
-	    print "Warning: One or more .po files were skipped because "+\
-	          "they did not exist yet. Use the 'init' command to "+\
-	          "generate them for the first time."
+        if initial_warning:
+            print ""
+            print "Warning: One or more .po files were skipped because "+\
+                  "they did not exist yet. Use the 'init' command to "+\
+                  "generate them for the first time."
 
 
 class ImportCommand(Command):
@@ -362,24 +362,24 @@ class ImportCommand(Command):
     """
 
     def _iterate(self, language):
-	"""Yield 2-tuples of the target xml files and the source po catalogs.
+        """Yield 2-tuples of the target xml files and the source po catalogs.
 
-	This is implemeted as a separate iterator so that later on we can
-	also support a mechanism in which multiple xml files are stored in
-	one .po file, i.e. on import, a single .po file needs to be able to
-	yield into multiple .xml targets.
-	"""
+        This is implemeted as a separate iterator so that later on we can
+        also support a mechanism in which multiple xml files are stored in
+        one .po file, i.e. on import, a single .po file needs to be able to
+        yield into multiple .xml targets.
+        """
         for kind in self.env.xmlfiles:
-	    language_po = language.po(kind)
-	    language_xml = language.xml(kind)
+            language_po = language.po(kind)
+            language_xml = language.xml(kind)
 
-	    if not language_po.exists():
-		self.w.action('skipped', language_xml)
-		self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
-		continue
-	    yield language_xml, read_catalog(language_po)
+            if not language_po.exists():
+                self.w.action('skipped', language_xml)
+                self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
+                continue
+            yield language_xml, read_catalog(language_po)
 
     def execute(self):
         for language in self.env.languages:
-	    for target_xml, podata in self._iterate(language):
-		write_file(self, target_xml, xml2string(po2xml(podata)))
+            for target_xml, podata in self._iterate(language):
+                write_file(self, target_xml, xml2string(po2xml(podata)))
