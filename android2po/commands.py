@@ -158,7 +158,8 @@ class InitCommand(Command):
 	"""Generate the .pot templates. Returns the catalog objects as a
 	kind -> catalog dict.
 
-	TODO: Write a test that this happens during the "init" command as well.
+	TODO: Write a test that this happens during both the "export"
+	and the "init" command (the latter is new).
 	"""
 	env = self.env
 	default_catalogs = {}
@@ -314,7 +315,7 @@ class ExportCommand(InitCommand):
 	#
         # TODO: Should this really be generated in every case, or do we
         # want to enable the user to set fixed meta data, and simply
-        # merge subsequent updates in? 
+        # merge subsequent updates in?
 	default_catalogs, _ = self.generate_templates()
 
 	initial_warning = False
