@@ -116,14 +116,14 @@ def read_config(file):
     return config
 
 
-def make_env(argv, writer):
+def make_env_and_writer(argv):
     """Given the command line arguments in ``argv``, construct an
     environment.
 
     This entails everything from parsing the command line, parsing
     a config file, if there is one, merging the two etc.
 
-    Returns a ``Environment`` instance.
+    Returns a 2-tuple (``Environment`` instance, ``Writer`` instance).
     """
 
     env = Environment()
@@ -132,6 +132,15 @@ def make_env(argv, writer):
     # that any potential syntax errors there will cause us to
     # fail before doing anything else.
     options = parse_args(argv)
+
+    # Setup the writer verbosity threshold based on the options.
+    writer = Writer()
+    if options.verbose:
+        writer.verbosity = 3
+    elif options.quiet:
+        writer.verbosity = 1
+    else:
+        writer.verbosity = 2
 
     # Try to load a config file, either if given at the command line,
     # or the one that was automatically found. Note that even if a
@@ -146,9 +155,7 @@ def make_env(argv, writer):
         env.config_file = config_file
     elif env.config_file:
         config_file = env.config_file
-        if options.verbose:
-            writer.action('info',
-                          "Using auto-detected config file: %s"  % config_file)
+        writer.action('info', "Using auto-detected config file: %s"  % config_file)
     if config_file:
         env.pop_from_config(read_config(config_file))
 
@@ -159,11 +166,11 @@ def make_env(argv, writer):
     # Some paths, if we still don't have values for them, can be deducted
     # from the project directory.
     env.auto_paths()
-    if env.options.verbose and (env.auto_gettext_dir or env.auto_resource_dir):
+    if env.auto_gettext_dir or env.auto_resource_dir:
         # Let the user know we are deducting information from the
         # project that we found.
         writer.action('info',
-                      "Assuming default directory structure in '%s'" % env.project_dir)
+                      "Assuming default directory structure in %s" % env.project_dir)
 
     # Initialize the environment. This mainly loads the list of
     # languages, but also does some basic validation.
@@ -184,16 +191,14 @@ def make_env(argv, writer):
         raise CommandError(e)
 
     # We're done. Just print some info out for the user.
-    if env.options.verbose:
-        writer.action('info',
-                      "Using as Android resource dir: '%s'" % env.resource_dir)
-        writer.action('info', "Using as gettext dir: '%s'" % env.gettext_dir)
-    if not env.options.quiet:
-        lstr = ", ".join(map(unicode, env.languages))
-        writer.action('info',
-                      "Found %d language(s): %s" % (len(env.languages), lstr))
+    writer.action('info',
+                  "Using as Android resource dir: %s" % env.resource_dir)
+    writer.action('info', "Using as gettext dir: %s" % env.gettext_dir)
+    lstr = ", ".join(map(unicode, env.languages))
+    writer.action('info',
+                  "Found %d language(s): %s" % (len(env.languages), lstr))
 
-    return env
+    return env, writer
 
 
 def main(argv):
@@ -202,10 +207,8 @@ def main(argv):
     Returns an error code or None.
     """
     try:
-        writer = Writer()
-
         # Build an environment from the list of arguments.
-        env = make_env(argv, writer)
+        env, writer = make_env_and_writer(argv)
         cmd = COMMANDS[env.options.command](env, writer)
         return cmd.execute()
     except CommandError, e:

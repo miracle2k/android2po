@@ -87,13 +87,14 @@ class Writer():
     since it often indicates the outcome.
     """
 
-    DELAY = object()
-
+    # Action types and their default levels
     EVENTS = {
-        'info': (), 'mkdir': (), 'updated': (), 'unchanged': (), 'skipped': (),
-         'created': (), 'exists': (), 'error': (),}
-    LEVELS = {
-        'default': (), 'warning': (), 'error': (), 'info': (),}
+        'info': 'info', 'mkdir': 'default', 'updated': 'default',
+        'unchanged': 'default', 'skipped': 'warning', 'created': 'default',
+        'exists': 'default', 'failed': 'error',}
+
+    # Levels and the minimum verbosity required to show them
+    LEVELS = {'default': 2, 'warning': 1, 'error': 0, 'info': 3}
 
     # +2 for [ and ]
     # +1 for additional left padding
@@ -104,11 +105,17 @@ class Writer():
             self.writer = writer
             self.messages = []
             self.is_done = False
-            dict.__init__(self, {'severity': 'default'})
+            self.awaiting_promotion = False
+            dict.__init__(self, {'text': '', 'severity': None})
             self.update(*more, **data)
 
+        def __setitem__(self, name, value):
+            if name == 'severity':
+                assert value in Writer.LEVELS, 'Not a valid severity value'
+            dict.__setitem__(self, name, value)
+
         def done(self, event, *more, **data):
-            assert event in Writer.EVENTS
+            assert event in Writer.EVENTS, 'Not a valid event type'
             self['event'] = event
             self.update(*more, **data)
             self.writer._print_action(self)
@@ -124,18 +131,33 @@ class Writer():
             dict.update(self, **more_data)
 
         def message(self, message, severity='info'):
+            """Print a message belonging to this action.
+
+            If the action is not yet done, this will be added to
+            an internal queue.
+
+            If the action is done, but was not printed because it didn't
+            pass the verbosity threshold, it will be printed now.
+
+            By default, all messages use a loglevel of 'info'.
+            """
+            is_allowed = self.writer.allowed(severity)
             if not self.is_done:
-                self.messages.append(message)
-            else:
+                if is_allowed:
+                    self.messages.append(message)
+            elif is_allowed:
+                if self.awaiting_promotion:
+                    self.writer._print_action(self, force=True)
                 self.writer._print_message(message)
 
         @property
         def event(self):
             return self['event']
 
-    def __init__(self):
+    def __init__(self, verbosity=LEVELS['default']):
         self._current_action = None
         self._pending_actions = []
+        self.verbosity = verbosity
 
     def action(self, event, *a, **kw):
         action = Writer.Action(self, *a, **kw)
@@ -153,18 +175,37 @@ class Writer():
     def finish(self):
         """Close down all pending actions that have been began(), but
         are not yet done.
+
+        Not the sibling of begin()!
         """
         for action in self._pending_actions:
             if not action.is_done:
-                action.done('error')
+                action.done('failed')
         self._pending_actions = []
 
-    def _print_action(self, action):
+    def allowed(self, severity):
+        """Return ``True`` if mesages with this severity pass
+        the current verbosity threshold.
+        """
+        return self.verbosity >= self.LEVELS[severity]
+
+    def _print_action(self, action, force=False):
         """Print the action and all it's attached messages.
         """
-        self._print_action_header(action)
-        for m in action.messages:
-            self._print_message(m)
+        sev = action['severity']
+        if not sev:
+            sev = self.EVENTS[action.event]
+
+        if force or self.allowed(sev):
+            self._print_action_header(action)
+            for m in action.messages:
+                self._print_message(m)
+            action.awaiting_promotion = False
+        else:
+            # Indicates that this message has not been printed yet,
+            # and is waiting for a dependent message that needs to
+            # be printed to trigger it.
+            action.awaiting_promotion = True
         self._current_action = action
 
     def _print_action_header(self, action):

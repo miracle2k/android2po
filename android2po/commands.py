@@ -70,7 +70,8 @@ def ensure_directories(cmd, path):
         os.mkdir(path)
 
 
-def write_file(cmd, filename, content, update=True, action=None):
+def write_file(cmd, filename, content, update=True, action=None,
+               ignore_exists=False):
     """Helper that writes a file, while sending the proper actions
     to the command's writer for stdout display of what's going on.
 
@@ -86,6 +87,9 @@ def write_file(cmd, filename, content, update=True, action=None):
 
     if filename.exists():
 	if not update:
+	    if ignore_exists:
+		# Downgade level of this message
+		action.update(severity='info')
 	    action.done('exists')
 	    return
 	else:
@@ -146,7 +150,7 @@ class InitCommand(Command):
 	"""Generate the .pot templates. Returns the catalog objects as a
 	kind -> catalog dict.
 
-	TODO: Test that this happens during the "init" command as well.
+	TODO: Write a test that this happens during the "init" command as well.
 	"""
 	env = self.env
 	default_catalogs = {}
@@ -158,14 +162,17 @@ class InitCommand(Command):
 	    default_catalogs[kind] = default_catalog
             if not env.config.no_template:
 		if template_pot.exists() and not update:
-		    action.done('skipped')
+		    action.done('exists', severity='info')
 		else:
 		    cstring = catalog2string(default_catalog)
-		    write_file(self, template_pot, cstring, action=action)
+		    # Note that this is always rendered with "ignore_exists",
+		    # i.e. we only log this action if we change the template.
+		    write_file(self, template_pot, cstring, action=action,
+		               ignore_exists=True)
 	return default_catalogs
 
     def generate_po(self, target_po_file, default_data, language_data=None,
-                    language_data_files=None, update=True):
+                    language_data_files=None, update=True, ignore_exists=False):
         """Helper to generate a .po file.
 
 	``default_data`` is the coleltive data from the language neutral XML
@@ -184,6 +191,8 @@ class InitCommand(Command):
         action = self.w.begin(target_po_file)
 
         if not update and target_po_file.exists():
+	    if ignore_exists:
+		action.update(severity='info')
             action.done('exists')
             return
 
@@ -252,6 +261,9 @@ class InitCommand(Command):
 	# command everything needed to boostrap.
 	self.generate_templates(update=False)
 
+	# Only show [exists] actions if a specific language was requested.
+	show_exists = not bool(env.options.language)
+
         for language in languages:
 	    # For each language, generate a .po file. In case a language
 	    # already exists (that is, it's xml files exist, use the
@@ -261,14 +273,15 @@ class InitCommand(Command):
 	         lang_data,
 	         lang_files) in self._iterate(language, require_translation=False):
                 self.generate_po(target_po, template_data, lang_data, lang_files,
-		                 update=False)
+		                 update=False,
+		                 ignore_exists=show_exists)
 
 	    # Also for each language, generate the empty .xml resource files.
 	    # This will make us pick up the language on subsequent runs.
 	    for kind in self.env.xmlfiles:
                 write_file(self, language.xml(kind),
                            """<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""",
-		           update=False)
+		           update=False, ignore_exists=show_exists)
 
 
 class ExportCommand(InitCommand):
@@ -327,7 +340,8 @@ class ExportCommand(InitCommand):
 		    target_po = language.po(kind)
                     if not target_po.exists():
 			w.action('skipped', target_po)
-			w.message('File does not exist yet. Use --initial')
+			w.message('File does not exist yet. Use --initial',
+			          'warning')
                         continue
 
                     action = w.begin(target_po)
@@ -340,8 +354,9 @@ class ExportCommand(InitCommand):
 		    try:
 			lang_catalog = read_catalog(target_po, locale=language.code)
 		    except UnknownLocaleError:
-			action.message('%s is not a valid locale code' % language.code)
-			action.done('error')
+			action.message('%s is not a valid locale code' % language.code,
+			               'error')
+			action.done('failed')
 		    else:
 			lang_catalog.update(default_catalogs[kind])
 			# TODO: Should we include previous?
@@ -368,7 +383,7 @@ class ImportCommand(Command):
 
 	    if not language_po.exists():
 		self.w.action('skipped', language_xml)
-		self.w.message('%s doesn\'t exist' % language_po.rel)
+		self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
 		continue
 	    yield language_xml, read_catalog(language_po)
 
