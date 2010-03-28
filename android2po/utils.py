@@ -112,6 +112,8 @@ class Writer():
             self['event'] = event
             self.update(*more, **data)
             self.writer._print_action(self)
+            if self in self.writer._pending_actions:
+                self.writer._pending_actions.remove(self)
             self.is_done = True
 
         def update(self, text=None, severity=None, **more_data):
@@ -133,6 +135,7 @@ class Writer():
 
     def __init__(self):
         self._current_action = None
+        self._pending_actions = []
 
     def action(self, event, *a, **kw):
         action = Writer.Action(self, *a, **kw)
@@ -140,10 +143,21 @@ class Writer():
         return action
 
     def begin(self, *a, **kw):
-        return Writer.Action(self, *a, **kw)
+        action = Writer.Action(self, *a, **kw)
+        self._pending_actions.append(action)
+        return action
 
     def message(self, *a, **kw):
         self._current_action.message(*a, **kw)
+
+    def finish(self):
+        """Close down all pending actions that have been began(), but
+        are not yet done.
+        """
+        for action in self._pending_actions:
+            if not action.is_done:
+                action.done('error')
+        self._pending_actions = []
 
     def _print_action(self, action):
         """Print the action and all it's attached messages.

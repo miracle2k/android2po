@@ -375,5 +375,4 @@ class ImportCommand(Command):
     def execute(self):
         for language in self.env.languages:
 	    for target_xml, podata in self._iterate(language):
-		self.w.begin(target_xml)
 		write_file(self, target_xml, xml2string(po2xml(podata)))

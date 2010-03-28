@@ -209,8 +209,12 @@ def main(argv):
         cmd = COMMANDS[env.options.command](env, writer)
         return cmd.execute()
     except CommandError, e:
+        writer.finish()
         print 'Error:', e
         return 1
+    except:
+        writer.finish()
+        raise
 
 
 def run():
