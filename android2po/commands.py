@@ -215,10 +215,12 @@ class InitCommand(Command):
 		lang_catalog = xml2po(default_data)
 
 	    catalog = catalog2string(lang_catalog)
+
+	    # Make sure we don't count the header
+	    num_translated = len([m for m in lang_catalog if m.string and m.id])
+	    num_total = len(lang_catalog)
 	    action.message("%d strings processed, %d translated." % (
-		# Make sure we don't count the header.
-		len(lang_catalog),
-		len([m for m in lang_catalog if m.string and m.id])))
+		num_total, num_translated))
 	    return catalog
 
 	return write_file(self, target_po_file, content=make_catalog,
@@ -340,9 +342,7 @@ class ExportCommand(InitCommand):
 		try:
 		    lang_catalog = read_catalog(target_po, locale=language.code)
 		except UnknownLocaleError:
-		    action.message('%s is not a valid locale code' % language.code,
-		                   'error')
-		    action.done('failed')
+		    action.done('failed', status='%s is not a valid locale' % language.code)
 		else:
 		    lang_catalog.update(default_catalogs[kind])
 		    # TODO: Should we include previous?

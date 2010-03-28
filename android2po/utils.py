@@ -106,7 +106,7 @@ class Writer():
             self.messages = []
             self.is_done = False
             self.awaiting_promotion = False
-            dict.__init__(self, {'text': '', 'severity': None})
+            dict.__init__(self, {'text': '', 'status': None, 'severity': None})
             self.update(*more, **data)
 
         def __setitem__(self, name, value):
@@ -210,6 +210,7 @@ class Writer():
 
     def _print_action_header(self, action):
         text = action['text']
+        status = action['status']
         if isinstance(text, Path):
             # Handle Path instances manually. This doesn't happen
             # automatically because we haven't figur out how to make
@@ -217,6 +218,8 @@ class Writer():
             # by default, while still returning the full path if it
             # is used, say, during an open() operation.
             text = text.rel
+        if status:
+            text = "%s (%s)" % (text, status)
         print ("%"+str(self.max_event_len)+"s %s") % (
             "[%s]" % action['event'], text)
 
