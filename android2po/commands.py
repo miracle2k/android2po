@@ -96,7 +96,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 		# Downgade level of this message
 		action.update(severity='info')
 	    action.done('exists')
-	    return
+	    return False
 	else:
 	    old_hash = filename.hash()
     else:
@@ -123,6 +123,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 	# actually determine a change without generating the new
 	# version.
 	action.done('unchanged')
+    return True
 
 
 class Command(object):
@@ -161,6 +162,7 @@ class InitCommand(Command):
 	"""
 	env = self.env
 	default_catalogs = {}
+	something_written = False
         for kind in self.env.xmlfiles:
             template_pot = self.env.default.po(kind)
             if not env.config.no_template:
@@ -170,10 +172,11 @@ class InitCommand(Command):
             if not env.config.no_template:
 		# Note that this is always rendered with "ignore_exists",
 		# i.e. we only log this action if we change the template.
-		write_file(self, template_pot,
-	                   content=lambda: catalog2string(default_catalog),
-	                   action=action, ignore_exists=True, update=update)
-	return default_catalogs
+		if write_file(self, template_pot,
+	                      content=lambda: catalog2string(default_catalog),
+	                      action=action, ignore_exists=True, update=update):
+		    something_written = True
+	return default_catalogs, something_written
 
     def generate_po(self, target_po_file, default_data, language_data=None,
                     language_data_files=None, update=True, ignore_exists=False):
@@ -217,8 +220,9 @@ class InitCommand(Command):
 		len([m for m in lang_catalog if m.string and m.id])))
 	    return catalog
 
-	write_file(self, target_po_file, content=make_catalog, action=action,
-	           update=update, ignore_exists=ignore_exists)
+	return write_file(self, target_po_file, content=make_catalog,
+	                  action=action, update=update,
+	                  ignore_exists=ignore_exists)
 
     def _iterate(self, language, require_translation=True):
 	"""Yield 4-tuples in the form of: (
@@ -263,7 +267,7 @@ class InitCommand(Command):
 
 	# First, make sure the templates exist. This makes the "init"
 	# command everything needed to boostrap.
-	self.generate_templates(update=False)
+	_, something_done = self.generate_templates(update=False)
 
 	# Only show [exists] actions if a specific language was requested.
 	show_exists = not bool(env.options.language)
@@ -276,16 +280,21 @@ class InitCommand(Command):
 	         template_data,
 	         lang_data,
 	         lang_files) in self._iterate(language, require_translation=False):
-                self.generate_po(target_po, template_data, lang_data, lang_files,
-		                 update=False,
-		                 ignore_exists=show_exists)
+                if self.generate_po(target_po, template_data, lang_data, lang_files,
+		                    update=False,
+		                    ignore_exists=show_exists):
+		    something_done = True
 
 	    # Also for each language, generate the empty .xml resource files.
 	    # This will make us pick up the language on subsequent runs.
 	    for kind in self.env.xmlfiles:
-                write_file(self, language.xml(kind),
-                           """<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""",
-		           update=False, ignore_exists=show_exists)
+                if write_file(self, language.xml(kind),
+                              """<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""",
+		              update=False, ignore_exists=show_exists):
+		    something_done = True
+
+	if not something_done:
+	    self.w.action('info', 'Nothing to do.', 'default')
 
 
 class ExportCommand(InitCommand):
@@ -318,7 +327,7 @@ class ExportCommand(InitCommand):
         # want to enable the user to set fixed meta data, and simply
         # merge subsequent updates in? Note this may affect the --initial
         # mode below, since it uses the template.
-	default_catalogs = self.generate_templates()
+	default_catalogs, _ = self.generate_templates()
 
         if env.options.initial or env.options.overwrite:
 	    # In overwrite or initial mode, we (re)generate .po files
