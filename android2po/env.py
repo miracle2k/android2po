@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import os
 import re
 from os import path
+from .config import Config
+from .utils import Path
 
 
 __all__ = ('EnvironmentError', 'IncompleteEnvironment',
@@ -25,27 +27,57 @@ class Language(object):
         self.code = code
         self.env = env
 
-    def xml_file(self, filename):
+    def xml(self, kind):
         # Android uses a special language code format for the region part
         parts = tuple(self.code.split('_', 2))
         if len(parts) == 2:
             android_code = "%s-r%s" % parts
         else:
             android_code = "%s" % parts
-        return path.join(self.env.resource_dir,
-                         'values-%s/%s' % (android_code, filename))
+        return self.env.path(self.env.resource_dir,
+                             'values-%s/%s.xml' % (android_code, kind))
 
-    def po_file(self, filename):
-        return path.join(self.env.gettext_dir, filename % self.code)
-
-    def has_xml(self, filename):
-        return path.exists(self.xml_file(filename))
-
-    def has_po(self, filename):
-        return path.exists(self.po_file(filename))
+    def po(self, kind):
+        filename = '%s.po' % self.code
+        if len(self.env.xmlfiles) > 1:
+            filename = "%s-%s" % (kind, filename)
+        return self.env.path(self.env.gettext_dir, filename)
 
     def __unicode__(self):
         return unicode(self.code)
+
+
+class DefaultLanguage(Language):
+    """A special version of ``Language``, representing the default
+    language.
+
+    For the Android side, this means the XML files in the values/
+    directory. For the gettext side, it means the .pot file(s).
+    """
+
+    def __init__(self, env):
+        super(DefaultLanguage, self).__init__('<def>', env)
+
+    def xml(self, kind):
+        return self.env.path(self.env.resource_dir, 'values/%s.xml' % kind)
+
+    def po(self, kind):
+        template_name = self.env.config.template_name
+        multiple_kinds = len(self.env.xmlfiles) > 1
+
+        # If the template name configured by the user supports a variable,
+        # then always insert the kind in it's place.
+        if '%s' in template_name:
+            filename = template_name % kind
+        else:
+            # Otherwise, if there are multiple kinds, use the current
+            # kind as a prefix to differentiate (i.e. arrays-template.pot).
+            if multiple_kinds:
+                filename = "%s-%s" % (kind, template_name)
+            else:
+                # Otherwise, we're fine with just the template name alone.
+                filename = template_name
+        return self.env.path(self.env.gettext_dir, filename)
 
 
 def find_project_dir_and_config():
@@ -94,7 +126,13 @@ def find_project_dir_and_config():
 LANG_DIR = re.compile(r'^values(?:-(\w\w)(?:-r(\w\w))?)?$')
 
 def collect_languages(resource_dir):
-    languages = [] 
+    """Returns a 2-tuple with (files, languages).
+
+    ``files`` is a list of the different xml files in the main values/
+    directory (strings.xml, arrays.xml),  ``languages`` a list of language
+    codes.
+    """
+    languages = []
     files = []
     for name in os.listdir(resource_dir):
         match = LANG_DIR.match(name)
@@ -103,26 +141,16 @@ def collect_languages(resource_dir):
         filepath = path.join(resource_dir, name)
         country, region = match.groups()
         if country == None:
+            # Processing the default values/ directory
             for filename in ('strings.xml', 'arrays.xml'):
                 file = path.join(filepath, filename)
                 if path.isfile(file):
-                    files.append((file,
-                                  filename,
-                                  filename.split('.')[0]+"-%s.po",
-                                  filename.split('.')[0]+".pot"),
-                    )
+                    files.append(path.splitext(filename)[0])
         else:
             code = "%s" % country
             if region:
                 code += "_%s" % region
             languages.append(code)
-
-    # check how many files was found
-    # if there is only strings.xml, the new filename only
-    # consists of the language code because of the behavior
-    # of the first versions of android2po
-    if (len(files) == 1) and (files[0][1] == 'strings.xml'):
-        files = [(files[0][0], files[0][1], "%s.po", "template.pot")]
 
     return files, languages
 
@@ -141,6 +169,8 @@ class Environment(object):
     def __init__(self):
         self.languages = []
         self.xmlfiles = []
+        self.default = DefaultLanguage(self)
+        self.config = Config()
         self.auto_gettext_dir = None
         self.auto_resource_dir = None
         self.resource_dir = None
@@ -151,32 +181,61 @@ class Environment(object):
         # default directory names.
         self.project_dir, self.config_file = find_project_dir_and_config()
 
-    def _pop_from(self, namespace, store_as):
+    def _pull_into(self, namespace, target):
+        """If for a value ``namespace`` there exists a corresponding
+        attribute on ``target``, then update that attribute with the
+        values from ``namespace``, and then remove the value from
+        ``namespace``.
+
+        This is needed because certain options, if passed on the command
+        line, need nevertheless to be stored in the ``self.config``
+        object. We therefore **pull** those values in, and return the
+        rest of the options.
+        """
         for name in dir(namespace):
             if name.startswith('_'):
                 continue
-            if name in self.__dict__:
-                # Attributes that already exist on our instance we would
-                # like to store here directly, i.e. make available as
-                # env.foo.
-                # All others will be at, for example, env.options.foo.
+            if name in target.__dict__:
+                setattr(target, name, getattr(namespace, name))
+                delattr(namespace, name)
+        return namespace
+
+    def _pull_into_self(self, namespace):
+        """This is essentially like ``self._pull_info``, but we pull
+        values into the environment object itself, and in order to avoid
+        conflicts between option values and attributes on the environment
+        (for example ``config``), we explicitly specify the values we're
+        interested in: It's the "big" ones which we would like to make
+        available on the environment object directly.
+        """
+        for name in ('resource_dir', 'gettext_dir'):
+            if hasattr(namespace, name):
                 setattr(self, name, getattr(namespace, name))
                 delattr(namespace, name)
-        setattr(self, store_as, namespace)
+        return namespace
 
-    def pop_from_options(self, options):
-        """Load the values we support into our attributes, remove them
-        from the ``options`` namespace, and store whatever is left in
-        ``self.options``.
+    def pop_from_options(self, argparse_namespace):
+        """Apply the set of options given on the command line.
+
+        These means that we need those options that are "configuration"
+        values to end up in ``self.config``. The normal options will
+        be made available as ``self.options``.
         """
-        self._pop_from(options, 'options')
+        rest = self._pull_into_self(argparse_namespace)
+        rest = self._pull_into(rest, self.config)
+        self.options = rest
 
-    def pop_from_config(self, config):
+    def pop_from_config(self, argparse_namespace):
         """Load the values we support into our attributes, remove them
         from the ``config`` namespace, and store whatever is left in
         ``self.config``.
         """
-        self._pop_from(config, 'config')
+        rest = self._pull_into_self(argparse_namespace)
+        rest = self._pull_into(rest, self.config)
+        # At this point, there shouldn't be anything left, because
+        # nothing should be included in the argparse result that we
+        # don't consider a configuration option.
+        assert not rest
 
     def auto_paths(self):
         """Try to auto-fill some path values that don't have values yet.
@@ -189,6 +248,11 @@ class Environment(object):
                 self.gettext_dir = path.join(self.project_dir, 'locale')
                 self.auto_gettext_dir = True
 
+    def path(self, *pargs):
+        """Helper that constructs a Path object using the project dir
+        as the base."""
+        return Path(*pargs, base=self.project_dir)
+
     def init(self):
         """Initialize the environment.
 
@@ -196,32 +260,32 @@ class Environment(object):
         doing some basic validation. An ``EnvironmentError`` is thrown
         if there is something wrong.
         """
-        # If either of those is not specified, we can't continue. Raise a 
+        # If either of those is not specified, we can't continue. Raise a
         # special exception that let's the caller display the proper steps
         # on how to proceed.
         if not self.resource_dir or not self.gettext_dir:
             raise IncompleteEnvironment()
-        
-        # It's not enough for directories to be specified; they really 
-        # should exist as well. In particular, the locale/ directory is 
+
+        # It's not enough for directories to be specified; they really
+        # should exist as well. In particular, the locale/ directory is
         # not part of the standard Android tree and thus likely to not
         # exist yet, so we create it automatically, but ONLY if it wasn't
         # specified explicitely. If the user gave a specific location,
-        # it seems right to let him deal with it fully.        
+        # it seems right to let him deal with it fully.
         if not path.exists(self.gettext_dir) and self.auto_gettext_dir:
             os.makedirs(self.gettext_dir)
-        elif not path.exists(self.gettext_dir):            
-            raise EnvironmentError('Gettext directory at "%s" doesn\'t exist.' % 
+        elif not path.exists(self.gettext_dir):
+            raise EnvironmentError('Gettext directory at "%s" doesn\'t exist.' %
                                    self.gettext_dir)
         elif not path.exists(self.resource_dir):
-            raise EnvironmentError('Android resource direcory at "%s" doesn\'t exist.' % 
+            raise EnvironmentError('Android resource direcory at "%s" doesn\'t exist.' %
                                    self.resource_dir)
 
         # Create an environment object based on all the data we have now.
-        xmlfiles, languages = collect_languages(self.resource_dir)
-        if not xmlfiles:
+        files, languages = collect_languages(self.resource_dir)
+        if not files:
             raise EnvironmentError('default language was not found.')
 
-        self.xmlfiles = xmlfiles
+        self.xmlfiles = files
         for code in languages:
             self.languages.append(Language(code, self))

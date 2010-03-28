@@ -8,8 +8,10 @@ from os import path
 import argparse
 
 # Resist the temptation to use "*". It won't work on Python 2.5.
-from .commands import InitCommand, ExportCommand, ImportCommand
+from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
 from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
+from .config import Config
+from .utils import Writer
 
 
 __all__ = ('main', 'run',)
@@ -20,59 +22,6 @@ COMMANDS = {
     'export': ExportCommand,
     'import': ImportCommand,
 }
-
-
-class Config:
-    # Defines all the values this config object supports, with the
-    # necessary meta data to both read them from an ini file and
-    # from command line arguments.
-    #
-    # Supported keys: name = name as both option and in config,
-    # help = short help text, dest - local attribute to store the value,
-    # default = default value, argparse_kwargs = additional arguments
-    # for the command line option.
-    OPTIONS = (
-        {'name': 'android',
-         'help': 'Android resource directory ($PROJECT/res by default)',
-         'dest': 'resource_dir',
-         'kwargs': {'metavar': 'DIR',}
-        },
-        {'name': 'gettext',
-         'help': 'directory containing the .po files ($PROJECT/locale by default)',
-         'dest': 'gettext_dir',
-         'kwargs': {'metavar': 'DIR',}
-        },
-    )
-
-    @classmethod
-    def setup_arguments(cls, parser):
-        """Setup our configuration values as arguments in the ``argparse``
-        object in ``parser``.
-        """
-        for optdef in cls.OPTIONS:
-            names = ('--%s' % optdef.get('name'),)
-            kwargs = {
-                'help': optdef.get('help', None),
-                'dest': optdef.get('dest', None),
-                # We handle defaults ourselves. This
-                # is actually important, or defaults
-                # from one config source may override
-                # valid values from another.
-                'default': argparse.SUPPRESS,
-            }
-            kwargs.update(optdef.get('kwargs', {}))
-            parser.add_argument(*names, **kwargs)
-
-    @classmethod
-    def rebase_paths(cls, config, base_path):
-        """Make those config values that are paths relative to
-        ``base_path``, because by default, paths are relative to
-        the current working directory.
-        """
-        for name in ('gettext_dir', 'resource_dir'):
-            value = getattr(config, name, None)
-            if value is not None:
-                setattr(config, name, path.normpath(path.join(base_path, value)))
 
 
 def parse_args(argv):
@@ -167,14 +116,14 @@ def read_config(file):
     return config
 
 
-def make_env(argv):
+def make_env_and_writer(argv):
     """Given the command line arguments in ``argv``, construct an
     environment.
 
     This entails everything from parsing the command line, parsing
     a config file, if there is one, merging the two etc.
 
-    Returns a ``Environment`` instance.
+    Returns a 2-tuple (``Environment`` instance, ``Writer`` instance).
     """
 
     env = Environment()
@@ -183,6 +132,15 @@ def make_env(argv):
     # that any potential syntax errors there will cause us to
     # fail before doing anything else.
     options = parse_args(argv)
+
+    # Setup the writer verbosity threshold based on the options.
+    writer = Writer()
+    if options.verbose:
+        writer.verbosity = 3
+    elif options.quiet:
+        writer.verbosity = 1
+    else:
+        writer.verbosity = 2
 
     # Try to load a config file, either if given at the command line,
     # or the one that was automatically found. Note that even if a
@@ -197,8 +155,7 @@ def make_env(argv):
         env.config_file = config_file
     elif env.config_file:
         config_file = env.config_file
-        if options.verbose:
-            print "Using auto-detected config file: %s"  % config_file
+        writer.action('info', "Using auto-detected config file: %s"  % config_file)
     if config_file:
         env.pop_from_config(read_config(config_file))
 
@@ -209,10 +166,11 @@ def make_env(argv):
     # Some paths, if we still don't have values for them, can be deducted
     # from the project directory.
     env.auto_paths()
-    if env.options.verbose and (env.auto_gettext_dir or env.auto_resource_dir):
+    if env.auto_gettext_dir or env.auto_resource_dir:
         # Let the user know we are deducting information from the
         # project that we found.
-        print "Assuming default directory structure in '%s'" % project_dir
+        writer.action('info',
+                      "Assuming default directory structure in %s" % env.project_dir)
 
     # Initialize the environment. This mainly loads the list of
     # languages, but also does some basic validation.
@@ -233,14 +191,14 @@ def make_env(argv):
         raise CommandError(e)
 
     # We're done. Just print some info out for the user.
-    if env.options.verbose:
-        print "Using as Android resource dir: '%s'" % env.resource_dir
-        print "Using as gettext dir: '%s'" % env.gettext_dir
-    if not env.options.quiet:
-        print "Found %d language(s): %s" % (len(env.languages),
-                                            ", ".join(map(unicode, env.languages)))
+    writer.action('info',
+                  "Using as Android resource dir: %s" % env.resource_dir)
+    writer.action('info', "Using as gettext dir: %s" % env.gettext_dir)
+    lstr = ", ".join(map(unicode, env.languages))
+    writer.action('info',
+                  "Found %d language(s): %s" % (len(env.languages), lstr))
 
-    return env
+    return env, writer
 
 
 def main(argv):
@@ -250,9 +208,12 @@ def main(argv):
     """
     try:
         # Build an environment from the list of arguments.
-        env = make_env(argv)
-        cmd = COMMANDS[env.options.command](env)
-        return cmd.execute()
+        env, writer = make_env_and_writer(argv)
+        try:
+            cmd = COMMANDS[env.options.command](env, writer)
+            return cmd.execute()
+        finally:
+            writer.finish()
     except CommandError, e:
         print 'Error:', e
         return 1

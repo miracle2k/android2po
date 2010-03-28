@@ -63,20 +63,34 @@ The basic idea is that:
 Aside from your authority strings.xml file, you usually will want to keep
 your file .po files in source control; The generated language-specific
 ``strings.xml`` files then contain no additional information, and do not
-need to be source controlled as well.
+need to be source controlled, though you are free to if you like.
 
-The script by default expects to be run from within a standard Android
-project directory tree (identified by a ``AndroidManifest.xml`` at it's
-root level), with a ``res`` directory holding the resources.
-The .po files by default are stored in a root level ``locale`` directory
-as ``locale/xx.po``.
+The environment
+~~~~~~~~~~~~~~~
 
-You can specify both locations manually:
+Two be able to run, the script necessarily needs to know about two
+filesystem locations: The directory where your Android resources are
+located, and the directory where the gettext .po files should be stored:
 
-    $ a2po --android ../my-resources COMMAND
+    $ a2po --android myproject/res --gettext myproject/locale COMMAND
 
-The script automatically processes all the languages found in your resource
-directory.
+However, to make things easier, the program will automatically try to
+detect the location of these folders, as follows:
+
+* It will search the directory hierarchy, starting with the your working
+  directory, for a ``AndroidManifest.xml`` or ``.android2po`` file.
+* As soon as it finds either of those files, it will stop, and consider
+  the it's location the **project directory**.
+* Unless explicitly overriden by you, it will place the .po files in
+  a subdirectory ``./locale`` of that project directory.
+* Only if a ``AndroidManifest.xml`` file is in the project directory
+  will it assume that the Android resources are located in a subfolder
+  named ``./res``.
+* If a ``.android2po`` file is in the project directory, it automatically
+  will be loaded as a configuration file. See the section below on the
+  format of the configuration file, and possible values.
+* The script automatically processes all the languages found in the
+  Android resource directory.
 
 Initial setup
 ~~~~~~~~~~~~~
@@ -87,10 +101,6 @@ initial export of your current translations.
     $ a2po init
 
 This will ignore any languages for which a ``.po`` file already exists.
-You can use the ``--overwrite`` flag to force an initial export of the
-XML files of all existing languages:
-
-    $ a2po export --overwrite
 
 For testing purposes, you may want to immediately import the generated
 files back in, to compare with what you originally had, and make sure
@@ -169,20 +179,20 @@ A configuration file can be used to avoid manually specifying all the
 required options. The format of the file is simply a list of command
 line option, each specified on a line of it's own. For example:
 
-    --ignore-fuzzy
+    --no-template
     # Paths - don't specify --android, default location is used.
     --gettext ../locale
 
 As you can see, comments are supported by using ``#``, and the mechanism
 to automatically try to detect the directories for .po files and Android
-``strings.xml`` files is still in place.
+``strings.xml`` files is still in place if you don't specify locations
+explicitly.
 
 The configuration file may be specified by using the ``--config`` option.
 Alternatively, if a ``.android2po`` file is found in the project directory,
 it will be used.
 
-"Project directory" is either the parent directory that contains
-``AndroidManifest.xml``, or ``.android2po``, whichever is found first.
+See ``--help`` for a list of possible configuration options.
 
 
 Notes

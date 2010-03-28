@@ -7,7 +7,7 @@ from lxml import etree
 from babel.messages import pofile, Catalog
 
 
-__all__ = ('xml2po', 'po2xml',)
+__all__ = ('xml2po', 'po2xml', 'read_xml')
 
 
 WHITESPACE = ' \n\t'     # Whitespace that we collapse
@@ -180,7 +180,7 @@ def get_element_text(tag):
     return value
 
 
-def _load_xml_strings(file):
+def read_xml(file):
     """Load all resource names from an Android strings.xml resource file.
 
     The result is a dict of ``name => value``, `with ``value`` being
@@ -228,10 +228,16 @@ def xml2po(file, translations=None):
     is a 2-tuple (catalog, unmatched), with the latter being a list of
     Android string resource names that are in the translated file, but
     not in the original.
+
+    Both arguments may also be an already loaded dict of xml strings,
+    as returned by ``read_xml``.
     """
-    original_strings = _load_xml_strings(file)
-    trans_strings = _load_xml_strings(translations) \
-                            if translations is not None else None
+    original_strings = file if isinstance(file, dict) else read_xml(file)
+    trans_strings = None
+    if translations is not None:
+        trans_strings = translations \
+                      if isinstance(translations, dict) \
+                      else read_xml(translations)
 
     catalog = Catalog()
     for name, org_value in original_strings.iteritems():
@@ -392,7 +398,7 @@ def po2xml(catalog, with_untranslated=False):
     # We can't write directly to the XML output, since stuff like
     # string-array items are not guaranteed to appear in the correct
     # order in the calalog. We "xml tree" pulls these things together.
-    # It is quite similar to the structure returned by _load_xml_strings().
+    # It is quite similar to the structure returned by read_xml().
     xml_tree = OrderedDict()
     for message in catalog:
         if not message.id:
