@@ -11,6 +11,7 @@ import argparse
 from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
 from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
 from .config import Config
+from .utils import Writer
 
 
 __all__ = ('main', 'run',)
@@ -115,7 +116,7 @@ def read_config(file):
     return config
 
 
-def make_env(argv):
+def make_env(argv, writer):
     """Given the command line arguments in ``argv``, construct an
     environment.
 
@@ -146,7 +147,8 @@ def make_env(argv):
     elif env.config_file:
         config_file = env.config_file
         if options.verbose:
-            print "Using auto-detected config file: %s"  % config_file
+            writer.action('info',
+                          "Using auto-detected config file: %s"  % config_file)
     if config_file:
         env.pop_from_config(read_config(config_file))
 
@@ -160,7 +162,8 @@ def make_env(argv):
     if env.options.verbose and (env.auto_gettext_dir or env.auto_resource_dir):
         # Let the user know we are deducting information from the
         # project that we found.
-        print "Assuming default directory structure in '%s'" % project_dir
+        writer.action('info',
+                      "Assuming default directory structure in '%s'" % env.project_dir)
 
     # Initialize the environment. This mainly loads the list of
     # languages, but also does some basic validation.
@@ -182,11 +185,13 @@ def make_env(argv):
 
     # We're done. Just print some info out for the user.
     if env.options.verbose:
-        print "Using as Android resource dir: '%s'" % env.resource_dir
-        print "Using as gettext dir: '%s'" % env.gettext_dir
+        writer.action('info',
+                      "Using as Android resource dir: '%s'" % env.resource_dir)
+        writer.action('info', "Using as gettext dir: '%s'" % env.gettext_dir)
     if not env.options.quiet:
-        print "Found %d language(s): %s" % (len(env.languages),
-                                            ", ".join(map(unicode, env.languages)))
+        lstr = ", ".join(map(unicode, env.languages))
+        writer.action('info',
+                      "Found %d language(s): %s" % (len(env.languages), lstr))
 
     return env
 
@@ -197,9 +202,11 @@ def main(argv):
     Returns an error code or None.
     """
     try:
+        writer = Writer()
+
         # Build an environment from the list of arguments.
-        env = make_env(argv)
-        cmd = COMMANDS[env.options.command](env)
+        env = make_env(argv, writer)
+        cmd = COMMANDS[env.options.command](env, writer)
         return cmd.execute()
     except CommandError, e:
         print 'Error:', e

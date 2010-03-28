@@ -4,6 +4,7 @@ import os
 import re
 from os import path
 from .config import Config
+from .utils import Path
 
 
 __all__ = ('EnvironmentError', 'IncompleteEnvironment',
@@ -26,27 +27,21 @@ class Language(object):
         self.code = code
         self.env = env
 
-    def xml_file(self, kind):
+    def xml(self, kind):
         # Android uses a special language code format for the region part
         parts = tuple(self.code.split('_', 2))
         if len(parts) == 2:
             android_code = "%s-r%s" % parts
         else:
             android_code = "%s" % parts
-        return path.join(self.env.resource_dir,
-                         'values-%s/%s.xml' % (android_code, kind))
+        return self.env.path(self.env.resource_dir,
+                             'values-%s/%s.xml' % (android_code, kind))
 
-    def po_file(self, kind):
+    def po(self, kind):
         filename = '%s.po' % self.code
         if len(self.env.xmlfiles) > 1:
             filename = "%s-%s" % (kind, filename)
-        return path.join(self.env.gettext_dir, filename)
-
-    def has_xml(self, kind):
-        return path.exists(self.xml_file(kind))
-
-    def has_po(self, kind):
-        return path.exists(self.po_file(kind))
+        return self.env.path(self.env.gettext_dir, filename)
 
     def __unicode__(self):
         return unicode(self.code)
@@ -63,10 +58,10 @@ class DefaultLanguage(Language):
     def __init__(self, env):
         super(DefaultLanguage, self).__init__('<def>', env)
 
-    def xml_file(self, kind):
-        return path.join(self.env.resource_dir, 'values/%s.xml' % kind)
+    def xml(self, kind):
+        return self.env.path(self.env.resource_dir, 'values/%s.xml' % kind)
 
-    def po_file(self, kind):
+    def po(self, kind):
         template_name = self.env.config.template_name
         multiple_kinds = len(self.env.xmlfiles) > 1
 
@@ -82,7 +77,7 @@ class DefaultLanguage(Language):
             else:
                 # Otherwise, we're fine with just the template name alone.
                 filename = template_name
-        return path.join(self.env.gettext_dir, filename)
+        return self.env.path(self.env.gettext_dir, filename)
 
 
 def find_project_dir_and_config():
@@ -252,6 +247,11 @@ class Environment(object):
             if not self.gettext_dir:
                 self.gettext_dir = path.join(self.project_dir, 'locale')
                 self.auto_gettext_dir = True
+
+    def path(self, *pargs):
+        """Helper that constructs a Path object using the project dir
+        as the base."""
+        return Path(*pargs, base=self.project_dir)
 
     def init(self):
         """Initialize the environment.
