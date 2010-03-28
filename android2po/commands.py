@@ -230,7 +230,7 @@ class InitCommand(Command):
 		    # It's easily possible that say a arrays.xml only
 		    # exists in values/, but not in values-xx/.
 		    self.w.action('skipped', language_po)
-		    self.w.message('%s doesn\'t exist' % language_p.rel)
+		    self.w.message('%s doesn\'t exist' % language_po.rel)
 		    continue
 	    else:
 		language_data = read_xml(language_xml)
