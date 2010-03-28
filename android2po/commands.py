@@ -75,6 +75,11 @@ def write_file(cmd, filename, content, update=True, action=None,
     """Helper that writes a file, while sending the proper actions
     to the command's writer for stdout display of what's going on.
 
+    ``content`` may be a callable. This is useful if you would like
+    to exploit the ``update=False`` check this function provides,
+    rather than doing that yourself before bothering to generate the
+    content you want to write.
+
     When ``update`` is not set, then if the file already exists we don't
     change or overwrite it.
 
@@ -101,6 +106,8 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     f = open(filename, 'wb')
     try:
+	if callable(content):
+	    content = content()
         f.write(content)
 	f.flush()
     finally:
@@ -161,24 +168,21 @@ class InitCommand(Command):
             default_catalog = xml2po(self.env.default.xml(kind))
 	    default_catalogs[kind] = default_catalog
             if not env.config.no_template:
-		if template_pot.exists() and not update:
-		    action.done('exists', severity='info')
-		else:
-		    cstring = catalog2string(default_catalog)
-		    # Note that this is always rendered with "ignore_exists",
-		    # i.e. we only log this action if we change the template.
-		    write_file(self, template_pot, cstring, action=action,
-		               ignore_exists=True)
+		# Note that this is always rendered with "ignore_exists",
+		# i.e. we only log this action if we change the template.
+		write_file(self, template_pot,
+	                   content=lambda: catalog2string(default_catalog),
+	                   action=action, ignore_exists=True, update=update)
 	return default_catalogs
 
     def generate_po(self, target_po_file, default_data, language_data=None,
                     language_data_files=None, update=True, ignore_exists=False):
         """Helper to generate a .po file.
 
-	``default_data`` is the coleltive data from the language neutral XML
+	``default_data`` is the collective data from the language neutral XML
 	files, and this is what the .po we generate will be based on.
 
-	``language_data`` is colletive data from the corresponding
+	``language_data`` is collective data from the corresponding
 	language-specific XML files, in case such data is available.
 
 	``language_data_files`` is the list of files that ``language_data``
@@ -190,31 +194,31 @@ class InitCommand(Command):
 	"""
         action = self.w.begin(target_po_file)
 
-        if not update and target_po_file.exists():
-	    if ignore_exists:
-		action.update(severity='info')
-            action.done('exists')
-            return
+	# This is a function so that it only will be run if write_file()
+	# actually needs it.
+        def make_catalog():
+	    if language_data is not None:
+		action.message('Using existing translations from %s' % ", ".join(
+		    [l.rel for l in language_data_files]))
+		lang_catalog, unmatched = xml2po(default_data, language_data)
+		if unmatched:
+		    action.message("Existing translation XML files for this "
+			           "language contains strings not found in the "
+			           "default XML files: %s" % (", ".join(unmatched)))
+	    else:
+		action.message('No corresponding XML exists, generating catalog '+
+		               'without translations')
+		lang_catalog = xml2po(default_data)
 
-        if language_data is not None:
-            action.message('Using existing translations from %s' % ", ".join(
-	        [l.rel for l in language_data_files]))
-            lang_catalog, unmatched = xml2po(default_data, language_data)
-            if unmatched:
-                action.message("Existing translation XML files for this "
-		               "language contains strings not found in the "
-		               "default XML files: %s" % (", ".join(unmatched)))
-        else:
-            action.message('No corresponding XML exists, generating catalog '+
-	                   'without translations')
-            lang_catalog = xml2po(default_data)
+	    catalog = catalog2string(lang_catalog)
+	    action.message("%d strings processed, %d translated." % (
+		# Make sure we don't count the header.
+		len(lang_catalog),
+		len([m for m in lang_catalog if m.string and m.id])))
+	    return catalog
 
-	cstring = catalog2string(lang_catalog)
-        action.message("%d strings processed, %d translated." % (
-            # Make sure we don't count the header.
-            len(lang_catalog),
-            len([m for m in lang_catalog if m.string and m.id])))
-	write_file(self, target_po_file, cstring, action=action)
+	write_file(self, target_po_file, content=make_catalog, action=action,
+	           update=update, ignore_exists=ignore_exists)
 
     def _iterate(self, language, require_translation=True):
 	"""Yield 4-tuples in the form of: (
