@@ -52,12 +52,22 @@ def xml2string(xmldom):
                           encoding=ENCODING, pretty_print=True)
 
 
-def ensure_directories(cmd, dir):
+def ensure_directories(cmd, path):
     """Ensure that the given directory exists.
     """
-    if not dir.exists():
-        cmd.w.action('mkdir', dir)
-        os.makedirs(dir)
+    # Collect all the individual directories we need to create.
+    # Yes, I know about os.makedirs(), but I'd like to print out
+    # every single directory created.
+    needs_creating = []
+    while not path.exists():
+	if path in needs_creating:
+	    break
+	needs_creating.append(path)
+	path = path.dir
+
+    for path in reversed(needs_creating):
+        cmd.w.action('mkdir', path)
+        os.mkdir(path)
 
 
 def write_file(cmd, filename, content, update=True, action=None):
