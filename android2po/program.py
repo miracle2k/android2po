@@ -209,15 +209,14 @@ def main(argv):
     try:
         # Build an environment from the list of arguments.
         env, writer = make_env_and_writer(argv)
-        cmd = COMMANDS[env.options.command](env, writer)
-        return cmd.execute()
+        try:
+            cmd = COMMANDS[env.options.command](env, writer)
+            return cmd.execute()
+        finally:
+            writer.finish()
     except CommandError, e:
-        writer.finish()
         print 'Error:', e
         return 1
-    except:
-        writer.finish()
-        raise
 
 
 def run():
