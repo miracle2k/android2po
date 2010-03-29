@@ -374,7 +374,7 @@ def write_to_dom(elem_name, value, message):
     return elem
 
 
-def po2xml(catalog, with_untranslated=False):
+def po2xml(catalog, with_untranslated=False, filter=None):
     """Convert the gettext catalog in ``catalog`` to an XML DOM.
 
     This currently relies entirely in the fact that we can use the context
@@ -410,6 +410,9 @@ def po2xml(catalog, with_untranslated=False):
 
         if not message.string and not with_untranslated:
             # Untranslated.
+            continue
+
+        if filter and filter(message):
             continue
 
         value = message.string or message.id

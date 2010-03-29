@@ -1,10 +1,11 @@
 import os, sys
-from os.path import join
+from os.path import join, dirname
 import tempfile
 import shutil
 
 from babel.messages import pofile
 from android2po import program as a2po
+from android2po.convert import read_xml
 
 
 __all__ = ('ProgramTest', 'TempProject',)
@@ -33,8 +34,8 @@ class TempProject(object):
         if config is not None:
             self.write_config(config)
 
-        os.mkdir(self.p(resource_dir))
-        os.mkdir(self.p(resource_dir, 'values'))
+        os.mkdir(self.locale_dir)
+        os.mkdir(self.resource_dir)
         self.write_xml(default_xml)
 
     def __del__(self):
@@ -58,7 +59,7 @@ class TempProject(object):
             config = "\n".join(config)
         mkfile(self.p('.android2po'), config)
 
-    def write_xml(self, data, lang=None, kind='strings'):
+    def write_xml(self, data={}, lang=None, kind='strings'):
         # Could use the more robust XML writing functions from
         # android2po.convert.
         content = '<resources>'
@@ -66,10 +67,19 @@ class TempProject(object):
             content += '<string name="%s">%s</string>' % (k, v)
         content += '</resources>'
 
-        dirname = 'values'
+        folder = 'values'
         if lang:
-            dirname = "%s-%s" % (dirname, lang)
-        mkfile(self.p(self.resource_dir, dirname, '%s.xml' % kind), content)
+            folder = "%s-%s" % (folder, lang)
+        filename = self.p(self.resource_dir, folder, '%s.xml' % kind)
+        os.makedirs(dirname(filename))
+        mkfile(filename, content)
+
+    def write_po(self, catalog, filename):
+        file = open(join(self.locale_dir, '%s' % filename), 'wb')
+        try:
+            return pofile.write_po(file, catalog)
+        finally:
+            file.close()
 
     def program(self, command=None, kwargs={}):
         """Run android2po in this project's working directory.
@@ -106,12 +116,18 @@ class TempProject(object):
             os.chdir(old_cwd)
             sys.stderr = old_stderr
 
-    def get_po(self, l):
-        file = open(join(self.locale_dir, '%s' % l), 'rb')
+    def get_po(self, filename):
+        file = open(join(self.locale_dir, '%s' % filename), 'rb')
         try:
             return pofile.read_po(file)
         finally:
             file.close()
+
+    def get_xml(self, lang=None, kind='strings'):
+        dirname = 'values'
+        if lang:
+            dirname = "%s-%s" % (dirname, lang)
+        return read_xml(self.p(self.resource_dir, dirname, '%s.xml' % kind))
 
 
 class ProgramTest(object):

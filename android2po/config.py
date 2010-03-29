@@ -42,6 +42,12 @@ class Config(object):
          'default': [],
          'kwargs': {'metavar': 'MATCH', 'action': 'append',}
         },
+        {'name': 'ignore-fuzzy',
+         'help': 'during import, ignore messages marked as fuzzy in .po files',
+         'dest': 'ignore_fuzzy',
+         'default': False,
+         'kwargs': {'action': 'store_true',}
+        },
     )
 
     def __init__(self):

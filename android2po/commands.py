@@ -11,7 +11,6 @@ from babel.messages import pofile
 from babel.core import UnknownLocaleError
 
 from . import convert
-from .convert import po2xml, read_xml
 from .env import Language
 from .termcolors import colored
 
@@ -64,6 +63,17 @@ def xml2po(env, *a, **kw):
                 return True
     kw['filter'] = xml_filter
     return convert.xml2po(*a, **kw)
+
+
+def po2xml(env, *a, **kw):
+    """Wrapper around the base po2xml() that uses the filters configured
+    by the environment.
+    """
+    def po_filter(message):
+        if env.config.ignore_fuzzy and message.fuzzy:
+            return True
+    kw['filter'] = po_filter
+    return convert.po2xml(*a, **kw)
 
 
 def ensure_directories(cmd, path):
@@ -268,9 +278,9 @@ class InitCommand(Command):
                     self.w.message('%s doesn\'t exist' % language_po.rel)
                     continue
             else:
-                language_data = read_xml(language_xml)
+                language_data = convert.read_xml(language_xml)
 
-            template_data = read_xml(self.env.default.xml(kind))
+            template_data = convert.read_xml(self.env.default.xml(kind))
             yield language_po, template_data, language_data, [language_xml]
 
     def execute(self):
@@ -398,4 +408,4 @@ class ImportCommand(Command):
     def execute(self):
         for language in self.env.languages:
             for target_xml, podata in self._iterate(language):
-                write_file(self, target_xml, xml2string(po2xml(podata)))
+                write_file(self, target_xml, xml2string(po2xml(self.env, podata)))

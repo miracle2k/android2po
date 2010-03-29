@@ -3,6 +3,7 @@
 
 from nose.tools import assert_raises
 from tests.helpers import ProgramTest
+from babel.messages import Catalog
 
 
 class TestNoTemplate(ProgramTest):
@@ -79,3 +80,20 @@ class TestIgnores(ProgramTest):
         p = self.setup_project(default_xml={'pref_x': '123', 'app_name': 'Foo'})
         p.program('init', {'de': '', '--ignore': ('app_name', '/pref/')})
         assert len(p.get_po('de.po')) == 0
+
+
+class TestIgnoreFuzzy(ProgramTest):
+    """Test the --ignore-fuzzy option.
+    """
+
+    def test(self):
+        p = self.setup_project()
+        p.write_xml(lang='de')
+        c = Catalog(locale='de')
+        c.add('en1', 'de1', flags=('fuzzy',), context='foo')
+        c.add('en2', 'de2', context='bar')
+        p.write_po(c, 'de.po')
+        p.program('import', {'--ignore-fuzzy': True})
+        xml = p.get_xml('de')
+        assert not 'foo' in xml
+        assert 'bar' in xml

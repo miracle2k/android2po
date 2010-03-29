@@ -6,10 +6,7 @@ install a config file if it doesn't exist. Maybe we could to this if init
 is called without any .po files existing yet, and without a specific
 language being requested.
 
-Option to ignore fuzzy strings on import.
-
 Options we would like to support:
-	- messages to ignore
 	- ability to pull .po header fields into messages
 	- specify a gettext domain to use
 	- specify the gettext directory layout, based on the domain:
