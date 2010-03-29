@@ -5,7 +5,11 @@ from __future__ import absolute_import
 
 import sys
 from os import path
+
 import argparse
+if hasattr(argparse, '__version__') and argparse.__version__ < '1.1':
+    raise RuntimeError('Needs at least argparse 1.1 to function, you are '+
+                       'using: %s' % argparse.__version__)
 
 # Resist the temptation to use "*". It won't work on Python 2.5.
 from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
