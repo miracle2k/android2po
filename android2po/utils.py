@@ -1,9 +1,13 @@
-import os
+from __future__ import absolute_import
+
+import os, sys
 try:
     from hashlib import md5
 except ImportError:
    import md5
 from os import path
+
+from .termcolors import colored
 
 
 __all__ = ('Path', 'Writer', 'file_md5')
@@ -155,15 +159,22 @@ class Writer():
             is_allowed = self.writer.allowed(severity)
             if not self.is_done:
                 if is_allowed:
-                    self.messages.append(message)
+                    self.messages.append((message, severity))
             elif is_allowed:
                 if self.awaiting_promotion:
                     self.writer._print_action(self, force=True)
-                self.writer._print_message(message)
+                self.writer._print_message(message, severity)
 
         @property
         def event(self):
             return self['event']
+
+        @property
+        def severity(self):
+            sev = self['severity']
+            if not sev:
+                sev = Writer.EVENTS[self.event]
+            return sev
 
     def __init__(self, verbosity=LEVELS['default']):
         self._current_action = None
@@ -211,17 +222,37 @@ class Writer():
         """
         return self.verbosity >= self.LEVELS[severity]
 
+    def _get_style_for_level(self, severity):
+        """Return a dict that can be passed as **kwargs to colored().
+        """
+        # Other colors that work moderatly well on both dark and
+        # light backgrounds and aren't yet used: cyan, green
+        return {
+            'default': {'fg': 'blue'},
+            'info': {},
+            'warning': {'fg': 'magenta'},
+            'error': {'fg': 'red'},
+        }.get(severity, {})
+
+    def get_style_for_action(self, action):
+        """First looks at the event type to determine a style, then
+        falls back to severity for good measure.
+        """
+        try:
+            return {
+                'info': {},   # alyways render info in default
+                'exists': {'fg': 'blue'}
+            }[action.event]
+        except KeyError:
+            return self._get_style_for_level(action.severity)
+
     def _print_action(self, action, force=False):
         """Print the action and all it's attached messages.
         """
-        sev = action['severity']
-        if not sev:
-            sev = self.EVENTS[action.event]
-
-        if force or self.allowed(sev):
+        if force or self.allowed(action.severity):
             self._print_action_header(action)
-            for m in action.messages:
-                self._print_message(m)
+            for m, severity in action.messages:
+                self._print_message(m, severity)
             action.awaiting_promotion = False
         else:
             # Indicates that this message has not been printed yet,
@@ -242,8 +273,17 @@ class Writer():
             text = text.rel
         if status:
             text = "%s (%s)" % (text, status)
-        print ("%"+str(self.max_event_len)+"s %s") % (
-            "[%s]" % action['event'], text)
+        tag = "[%s]" % action['event']
 
-    def _print_message(self, message):
-        print " "*(self.max_event_len+1) + u"- %s" % message
+        style = self.get_style_for_action(action)
+        sys.stdout.write(colored(("%"+str(self.max_event_len)+"s") % tag, opts=('bold',), **style))
+        sys.stdout.write(colored(opts=('noreset',), **style))
+        sys.stdout.write(" ")
+        sys.stdout.write(text)
+        sys.stdout.write(colored())
+        sys.stdout.write("\n")
+
+    def _print_message(self, message, severity):
+        style = self._get_style_for_level(severity)
+        print colored(" "*(self.max_event_len+1) + u"- %s" % message,
+                       **style)

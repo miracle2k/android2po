@@ -12,6 +12,7 @@ from babel.core import UnknownLocaleError
 
 from .convert import xml2po, po2xml, read_xml
 from .env import Language
+from .termcolors import colored
 
 
 __all__ = ('CommandError', 'ExportCommand', 'ImportCommand', 'InitCommand',)
@@ -352,9 +353,10 @@ class ExportCommand(InitCommand):
 
         if initial_warning:
             print ""
-            print "Warning: One or more .po files were skipped because "+\
-                  "they did not exist yet. Use the 'init' command to "+\
-                  "generate them for the first time."
+            print colored("Warning: One or more .po files were skipped "+\
+                  "because  they did not exist yet. Use the 'init' command "+\
+                  "to generate them for the first time.",
+                  fg='magenta', opts=('bold',))
 
 
 class ImportCommand(Command):
