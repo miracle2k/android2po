@@ -377,6 +377,9 @@ class ExportCommand(InitCommand):
                 try:
                     lang_catalog = read_catalog(target_po, locale=language.code)
                 except UnknownLocaleError:
+                    # TODO: Either we should fine a way to not validate that
+                    # any more, or we need to validate earlier. Say, during
+                    # init and during language collection.
                     action.done('failed', status='%s is not a valid locale' % language.code)
                 else:
                     lang_catalog.update(default_catalogs[kind])
