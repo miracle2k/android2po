@@ -40,7 +40,7 @@ class Config(object):
                  'inside slashes (/match/)',
          'dest': 'ignores',
          'default': [],
-         'kwargs': {'metavar': 'MATCH', 'action': 'append',}
+         'kwargs': {'metavar': 'MATCH', 'action': 'append', 'nargs': '+'}
         },
         {'name': 'ignore-fuzzy',
          'help': 'during import, ignore messages marked as fuzzy in .po files',
