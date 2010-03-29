@@ -4,7 +4,7 @@
 from itertools import chain
 from compat import OrderedDict
 from lxml import etree
-from babel.messages import pofile, Catalog
+from babel.messages import Catalog
 
 
 __all__ = ('xml2po', 'po2xml', 'read_xml')
