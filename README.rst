@@ -192,7 +192,9 @@ The configuration file may be specified by using the ``--config`` option.
 Alternatively, if a ``.android2po`` file is found in the project directory,
 it will be used.
 
-See ``--help`` for a list of possible configuration options.
+See ``--help`` for a list of possible configuration options. There's also
+an example configuration file in ``example.config`` that you can have a
+look at, or use as a template for your own.
 
 
 Notes
