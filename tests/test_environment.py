@@ -12,6 +12,6 @@ class TestConfig(ProgramTest):
         """Regression test: Make sure we can deal with config files that
         have values.
         """
-        p = self.setup_project(config=['--no-template'])
+        p = self.setup_project(config="")
         # This used to raise an AssertionError.
         p.program('init')

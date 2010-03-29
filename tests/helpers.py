@@ -31,7 +31,7 @@ class TempProject(object):
 
         if manifest:
             mkfile(self.p('AndroidManifest.xml'))
-        if config:
+        if config is not None:
             self.write_config(config)
 
         os.mkdir(self.p(resource_dir))
