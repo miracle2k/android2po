@@ -1,3 +1,6 @@
+The --verbose option currently doesn't do a lot. We could output more
+diagnostics, for example if and how many strings were ignored etc.
+
 Add some kind of variation on the init command that would automatically
 install a config file if it doesn't exist. Maybe we could to this if init
 is called without any .po files existing yet, and without a specific
@@ -14,6 +17,12 @@ Options we would like to support:
 		* domain/de.po
 		* de/domain.po
 		* de/LC_MESSAGES/domain.po
+   - option to emulate "always quote" mode, emulating the behavior of what
+	  seems to be an converter Google uses internally, which quotes all
+	  strings, regardless if they contain any content that would benefit
+	  from quoting.
+	- option to automatically ignore messages that only contain a variable
+	  reference, like  <string name="app_name">@string/app_name</string>
 
 There are large area of code that we currently don't test; mostly the
 whole environment handling, the way the config file is detected, it's
@@ -56,14 +65,3 @@ the tags (see the Browser app for an example).
 
 Android's Settings app uses <skip /> tags in it's language-specific XML
 string files. Find out what that means, and if we need to support it.
-
-Add a command line option to enable a always quote mode, emulating the
-behavior of what seems to be an converter Google uses internally, which
-quotes all strings, regardless if they contain any content that would benefit
-from quoting.
-
-Android allows a string to reference another resource, i.e.:
-	<string name="app_name">@string/app_name</string>
-	<string name="notify_title_generic">@string/app_name</string>
-Should be handle this in a specific way, like, say, not even bothering to
-export those kinds of strings?
