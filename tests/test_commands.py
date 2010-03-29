@@ -8,3 +8,19 @@ etc. In particular, we should test both the case of multiple XML input files
 will thus ensure that commands run, but does not check that they do the
 right thing.
 """
+
+from nose.tools import assert_raises
+from helpers import ProgramTest
+
+
+class TestImport(ProgramTest):
+
+    def test_missing_po(self):
+        """Test that we an handle a missing .po file during import
+        without crashing.
+        """
+        p = self.setup_project(languages=['de'])
+        # Ensure that the corresponding .po file doesn't exist
+        assert_raises(IOError, p.get_po, 'de.po')
+        # Still, the program runs fine
+        p.program('import')

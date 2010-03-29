@@ -1,5 +1,5 @@
 import os, sys
-from os.path import join, dirname
+from os.path import join, dirname, exists
 import tempfile
 import shutil
 
@@ -8,7 +8,12 @@ from android2po import program as a2po
 from android2po.convert import read_xml
 
 
-__all__ = ('ProgramTest', 'TempProject',)
+__all__ = ('ProgramTest', 'TempProject', 'SystemExitCaught')
+
+
+
+class SystemExitCaught(Exception):
+    pass
 
 
 def mkfile(path, content=''):
@@ -24,7 +29,7 @@ class TempProject(object):
     """
 
     def __init__(self, manifest=True, resource_dir='res', locale_dir='locale',
-                 config=None, default_xml={}):
+                 config=None, default_xml={}, languages=[]):
         self.dir = dir = tempfile.mkdtemp()
         self.locale_dir = self.p(locale_dir)
         self.resource_dir = self.p(resource_dir)
@@ -37,6 +42,9 @@ class TempProject(object):
         os.mkdir(self.locale_dir)
         os.mkdir(self.resource_dir)
         self.write_xml(default_xml)
+        # Languges which should be available by default
+        for code in languages:
+            self.write_xml(lang=code)
 
     def __del__(self):
         self.delete()
@@ -71,7 +79,8 @@ class TempProject(object):
         if lang:
             folder = "%s-%s" % (folder, lang)
         filename = self.p(self.resource_dir, folder, '%s.xml' % kind)
-        os.makedirs(dirname(filename))
+        if not exists(dirname(filename)):
+            os.makedirs(dirname(filename))
         mkfile(filename, content)
 
     def write_po(self, catalog, filename):
@@ -108,7 +117,7 @@ class TempProject(object):
                 ret = a2po.main(args)
             except SystemExit, e:
                 # argparse likes to raise this if arguments are invalid.
-                raise RuntimeError('SystemExit raised by program: %s', e)
+                raise SystemExitCaught('SystemExit raised by program: %s', e)
             else:
                 if ret:
                     raise RuntimeError('Program returned non-zero: %d', ret)

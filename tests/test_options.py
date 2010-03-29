@@ -2,7 +2,7 @@
 """
 
 from nose.tools import assert_raises
-from tests.helpers import ProgramTest
+from tests.helpers import ProgramTest, SystemExitCaught
 from babel.messages import Catalog
 
 
@@ -87,8 +87,7 @@ class TestIgnoreFuzzy(ProgramTest):
     """
 
     def test(self):
-        p = self.setup_project()
-        p.write_xml(lang='de')
+        p = self.setup_project(languages=['de'])
         c = Catalog(locale='de')
         c.add('en1', 'de1', flags=('fuzzy',), context='foo')
         c.add('en2', 'de2', context='bar')
@@ -97,3 +96,101 @@ class TestIgnoreFuzzy(ProgramTest):
         xml = p.get_xml('de')
         assert not 'foo' in xml
         assert 'bar' in xml
+
+
+class TestIgnoreMinComplete(ProgramTest):
+    """Test the --ignore-min-complete option.
+    """
+
+    def test(self):
+        p = self.setup_project(languages=['de'])
+
+        c = Catalog(locale='de')
+        c.add('translated', 'value', context='translated')
+        c.add('missing1', context='missing1')
+        c.add('missing2', context='missing2')
+        c.add('missing3', context='missing3')
+        p.write_po(c, 'de.po')
+
+        # At first, we require half the strings to be available.
+        # This is clearly not the case in the catalog above.
+        p.program('import', {'--require-min-complete': '0.5'})
+        assert len(p.get_xml('de')) == 0
+
+        # Now, only require 25% - this should just make the cut.
+        p.program('import', {'--require-min-complete': '0.25'})
+        assert len(p.get_xml('de')) == 1
+
+    def test_fuzzy(self):
+        """This option is affected by the --ignore-fuzzy flag. If
+        it is set, fuzzy strings are not counted towards the total.
+        """
+        p = self.setup_project(languages=['de'])
+
+        c = Catalog(locale='de')
+        c.add('translated', 'value', context='translated')
+        c.add('fuzzy', 'value', context='fuzzy', flags=('fuzzy',))
+        p.write_po(c, 'de.po')
+
+        # When fuzzy strings are counted, the catalog above is 100%
+        # complete.
+        p.program('import', {'--require-min-complete': '1'})
+        assert len(p.get_xml('de')) == 2
+
+        # If they aren't, it won't make the cut and the result should
+        # be no strings at all being written.
+        p.program('import', {'--require-min-complete': '1',
+                             '--ignore-fuzzy': True})
+        assert len(p.get_xml('de')) == 0
+
+    def test_multiple_pos(self):
+        """If the language writes to multiple .po files, those are
+        all counted together. Either all of them will be written,
+        or none of them will be.
+        """
+        p = self.setup_project(languages=['de'])
+        p.write_xml(kind='strings')
+        p.write_xml(kind='arrays')
+
+        # Create two catalogs, one fully translated, the other one not
+        # at all.
+        c = Catalog(locale='de')
+        c.add('translated', 'value', context='translated')
+        p.write_po(c, 'strings-de.po')
+
+        c = Catalog(locale='de')
+        c.add('untranslated', context='untranslated')
+        p.write_po(c, 'arrays-de.po')
+
+        # If we require 100% completness on import, both files will
+        # be empty, even though one of them is fully translated. But
+        # the second drags down the total of the group.
+        p.program('import', {'--require-min-complete': '1'})
+        assert len(p.get_xml('de', kind='strings')) == 0
+        assert len(p.get_xml('de', kind='arrays')) == 0
+
+    def test_clear(self):
+        """Explicitely test that if we ignore a language, the xml
+        file is overwritten with an empty version. Just not processing
+        it is not enough.
+        """
+        p = self.setup_project()
+
+        # We start out with one string in the XML
+        p.write_xml({'string1': 'value1'}, lang='de')
+        assert len(p.get_xml('de')) == 1
+
+        c = Catalog(locale='de')
+        c.add('string1', context='string1')
+        p.write_po(c, 'de.po')
+
+        # Now after the import, the resource file is empty.
+        p.program('import', {'--require-min-complete': '1'})
+        assert len(p.get_xml('de')) == 0
+
+    def test_error(self):
+        """Check that the argument is properly validated.
+        """
+        p = self.setup_project()
+        assert_raises(SystemExitCaught, p.program, 'import', {'--require-min-complete': '3'})
+        assert_raises(SystemExitCaught, p.program, 'import', {'--require-min-complete': 'asdf'})

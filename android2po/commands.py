@@ -7,7 +7,7 @@ try:
 except ImportError:
     import StringIO
 from lxml import etree
-from babel.messages import pofile
+from babel.messages import pofile, Catalog
 from babel.core import UnknownLocaleError
 
 from . import convert
@@ -76,6 +76,16 @@ def po2xml(env, *a, **kw):
     return convert.po2xml(*a, **kw)
 
 
+def get_catalog_counts(catalog):
+    """Return 3-tuple (total count, number of translated strings, number
+    of fuzzy strings), based on the given gettext catalog.
+    """
+    # Make sure we don't count the header
+    return (len(catalog),
+            len([m for m in catalog if m.string and m.id]),
+            len([m for m in catalog if m.string and m.id and m.fuzzy]))
+
+
 def ensure_directories(cmd, path):
     """Ensure that the given directory exists.
     """
@@ -109,9 +119,10 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     If a Writer.Action is given in ``action``, it will be used to print
     out messages. Otherwise, a new action will be started using the
-    filename as the text.
+    filename as the text. If ``action`` is ``False``, nothing will be
+    printed.
     """
-    if not action:
+    if action is None:
         action = cmd.w.begin(filename)
 
     if filename.exists():
@@ -137,16 +148,17 @@ def write_file(cmd, filename, content, update=True, action=None,
     finally:
         f.close()
 
-    if old_hash is None:
-        action.done('created')
-    elif old_hash != filename.hash():
-        action.done('updated')
-    else:
-        # Note that this is merely for user information. We
-        # nevertheless wrote a new version of the file, we can't
-        # actually determine a change without generating the new
-        # version.
-        action.done('unchanged')
+    if not action is False:
+        if old_hash is None:
+            action.done('created')
+        elif old_hash != filename.hash():
+            action.done('updated')
+        else:
+            # Note that this is merely for user information. We
+            # nevertheless wrote a new version of the file, we can't
+            # actually determine a change without generating the new
+            # version.
+            action.done('unchanged')
     return True
 
 
@@ -241,9 +253,7 @@ class InitCommand(Command):
 
             catalog = catalog2string(lang_catalog)
 
-            # Make sure we don't count the header
-            num_translated = len([m for m in lang_catalog if m.string and m.id])
-            num_total = len(lang_catalog)
+            num_total, num_translated, _ = get_catalog_counts(lang_catalog)
             action.message("%d strings processed, %d translated." % (
                 num_total, num_translated))
             return catalog
@@ -387,25 +397,67 @@ class ImportCommand(Command):
     """The import command.
     """
 
-    def _iterate(self, language):
-        """Yield 2-tuples of the target xml files and the source po catalogs.
-
-        This is implemeted as a separate iterator so that later on we can
-        also support a mechanism in which multiple xml files are stored in
-        one .po file, i.e. on import, a single .po file needs to be able to
-        yield into multiple .xml targets.
+    def process(self, language):
+        """Process importing the given language.
         """
+
+        # In order to implement the --require-min-complete option, we need
+        # to first determine the translation status across all .po catalogs
+        # for this language. We can keep the catalogs in memory because we
+        # will need them later anyway.
+        catalogs = {}
+        count_total = 0
+        count_translated = 0
         for kind in self.env.xmlfiles:
             language_po = language.po(kind)
+            if not language_po.exists():
+                continue
+            catalogs[kind] = catalog = read_catalog(language_po)
+            ntotal, ntrans, nfuzzy = get_catalog_counts(catalog)
+            count_total += ntotal
+            count_translated += ntrans
+            if self.env.config.ignore_fuzzy:
+                count_translated -= nfuzzy
+
+        # Compare our count with what is required, if anything.
+        skip_due_to_incomplete = False
+        min_required = self.env.config.min_completion
+        if count_total == 0:
+            actual_completeness = 1
+        else:
+            actual_completeness = count_translated / float(count_total)
+        if min_required:
+            skip_due_to_incomplete = actual_completeness < min_required
+
+        # Now loop through the list of target files, and either create
+        # them, or print a status message for each indicating that they
+        # were skipped.
+        for kind in self.env.xmlfiles:
             language_xml = language.xml(kind)
+            action = self.w.begin(language_xml)
+
+            if skip_due_to_incomplete:
+                # TODO: Creating a catalog object here is kind of clunky.
+                # Idially, we'd refactor convert.py so that we can use a
+                # dict to represent a resource XML file.
+                write_file(self, language_xml,
+                       xml2string(po2xml(self.env, Catalog(locale=language.code))),
+                       action=False)
+                action.done('skipped', status=('%s catalogs aren\'t '
+                                               'complete enough - %.2f done' % (
+                                                   language.code,
+                                                   actual_completeness)))
+                continue
 
             if not language_po.exists():
                 self.w.action('skipped', language_xml)
                 self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
                 continue
-            yield language_xml, read_catalog(language_po)
+
+            write_file(self, language_xml,
+                       xml2string(po2xml(self.env, catalogs[kind])),
+                       action=action)
 
     def execute(self):
         for language in self.env.languages:
-            for target_xml, podata in self._iterate(language):
-                write_file(self, target_xml, xml2string(po2xml(self.env, podata)))
+            self.process(language)

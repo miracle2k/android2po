@@ -276,7 +276,7 @@ class Writer():
         tag = "[%s]" % action['event']
 
         style = self.get_style_for_action(action)
-        sys.stdout.write(colored(("%"+str(self.max_event_len)+"s") % tag, opts=('bold',), **style))
+        sys.stdout.write(colored("%*s" % (self.max_event_len, tag), opts=('bold',), **style))
         sys.stdout.write(colored(opts=('noreset',), **style))
         sys.stdout.write(" ")
         sys.stdout.write(text)

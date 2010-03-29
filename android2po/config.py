@@ -5,6 +5,17 @@ import argparse
 __all__ = ('Config',)
 
 
+def percentage(string):
+    errstr = "must be a float between 0 and 1, not %r" % string
+    try:
+        value = float(string)
+    except ValueError:
+        raise argparse.ArgumentTypeError(errstr)
+    if value < 0 or value > 1:
+        raise argparse.ArgumentTypeError(errstr)
+    return value
+
+
 class Config(object):
     """Defines all the options supported by our configuration system.
     """
@@ -47,6 +58,13 @@ class Config(object):
          'dest': 'ignore_fuzzy',
          'default': False,
          'kwargs': {'action': 'store_true',}
+        },
+        {'name': 'require-min-complete',
+         'help': 'ignore a .po file completely if it doesn\'t have at least '+
+                 'the given percentage of translations',
+         'dest': 'min_completion',
+         'default': 0,
+         'kwargs': {'metavar': 'FLOAT', 'type': percentage}
         },
     )
 
