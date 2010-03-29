@@ -291,3 +291,12 @@ class Environment(object):
         self.xmlfiles = files
         for code in languages:
             self.languages.append(Language(code, self))
+
+        # If regular expressions are used as ignore filters, precompile
+        # those to help speed things along. For simplicity, we also
+        # convert all static ignores to regexes.
+        for i, ignore in enumerate(self.config.ignores):
+            if ignore.startswith('/') and ignore.endswith('/'):
+                self.config.ignores[i] = re.compile(ignore[1:-1])
+            else:
+                self.config.ignores[i] = re.compile("^%s$" % re.escape(ignore))

@@ -10,7 +10,8 @@ from lxml import etree
 from babel.messages import pofile
 from babel.core import UnknownLocaleError
 
-from .convert import xml2po, po2xml, read_xml
+from . import convert
+from .convert import po2xml, read_xml
 from .env import Language
 from .termcolors import colored
 
@@ -51,6 +52,18 @@ def xml2string(xmldom):
     ENCODING = 'utf-8'
     return etree.tostring(xmldom, xml_declaration=True,
                           encoding=ENCODING, pretty_print=True)
+
+
+def xml2po(env, *a, **kw):
+    """Wrapper around the base xml2po() that uses the filters configured
+    by the environment.
+    """
+    def xml_filter(name):
+        for filter in env.config.ignores:
+            if filter.match(name):
+                return True
+    kw['filter'] = xml_filter
+    return convert.xml2po(*a, **kw)
 
 
 def ensure_directories(cmd, path):
@@ -169,7 +182,7 @@ class InitCommand(Command):
             template_pot = self.env.default.po(kind)
             if not env.config.no_template:
                 action = self.w.begin(template_pot)
-            default_catalog = xml2po(self.env.default.xml(kind))
+            default_catalog = xml2po(self.env, self.env.default.xml(kind))
             default_catalogs[kind] = default_catalog
             if not env.config.no_template:
                 # Note that this is always rendered with "ignore_exists",
@@ -205,7 +218,8 @@ class InitCommand(Command):
             if language_data is not None:
                 action.message('Using existing translations from %s' % ", ".join(
                     [l.rel for l in language_data_files]))
-                lang_catalog, unmatched = xml2po(default_data, language_data)
+                lang_catalog, unmatched = xml2po(self.env, default_data,
+                                                 language_data)
                 if unmatched:
                     action.message("Existing translation XML files for this "
                                    "language contains strings not found in the "
@@ -213,7 +227,7 @@ class InitCommand(Command):
             else:
                 action.message('No corresponding XML exists, generating catalog '+
                                'without translations')
-                lang_catalog = xml2po(default_data)
+                lang_catalog = xml2po(self.env, default_data)
 
             catalog = catalog2string(lang_catalog)
 

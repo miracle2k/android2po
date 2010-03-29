@@ -219,7 +219,7 @@ def read_xml(file):
     return result
 
 
-def xml2po(file, translations=None):
+def xml2po(file, translations=None, filter=None):
     """Return the Android string resource in ``file`` as a babel
     .po catalog.
 
@@ -241,6 +241,9 @@ def xml2po(file, translations=None):
 
     catalog = Catalog()
     for name, org_value in original_strings.iteritems():
+        if filter and filter(name):
+            continue
+
         trans_value = None
         if trans_strings:
             trans_value = trans_strings.pop(name, trans_value)

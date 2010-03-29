@@ -34,6 +34,14 @@ class Config(object):
          'default': 'template.pot',
          'kwargs': {'metavar': 'NAME',}
         },
+        {'name': 'ignore',
+         'help': 'ignore the given message; can be given multiple times; '+
+                 'regular expressions can be used if putting the value '+
+                 'inside slashes (/match/)',
+         'dest': 'ignores',
+         'default': [],
+         'kwargs': {'metavar': 'MATCH', 'action': 'append',}
+        },
     )
 
     def __init__(self):

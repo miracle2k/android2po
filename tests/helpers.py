@@ -3,6 +3,7 @@ from os.path import join
 import tempfile
 import shutil
 
+from babel.messages import pofile
 from android2po import program as a2po
 
 
@@ -11,10 +12,7 @@ __all__ = ('ProgramTest', 'TempProject',)
 
 def mkfile(path, content=''):
     f = open(path, 'w')
-    if content == '<xml>':
-        f.write('<resources></resources>')
-    else:
-        f.write(content)
+    f.write(content)
     f.flush()
     f.close()
 
@@ -25,9 +23,10 @@ class TempProject(object):
     """
 
     def __init__(self, manifest=True, resource_dir='res', locale_dir='locale',
-                 config=None):
+                 config=None, default_xml={}):
         self.dir = dir = tempfile.mkdtemp()
         self.locale_dir = self.p(locale_dir)
+        self.resource_dir = self.p(resource_dir)
 
         if manifest:
             mkfile(self.p('AndroidManifest.xml'))
@@ -36,7 +35,7 @@ class TempProject(object):
 
         os.mkdir(self.p(resource_dir))
         os.mkdir(self.p(resource_dir, 'values'))
-        mkfile(self.p(resource_dir, 'values', 'strings.xml'), '<xml>')
+        self.write_xml(default_xml)
 
     def __del__(self):
         self.delete()
@@ -59,6 +58,19 @@ class TempProject(object):
             config = "\n".join(config)
         mkfile(self.p('.android2po'), config)
 
+    def write_xml(self, data, lang=None, kind='strings'):
+        # Could use the more robust XML writing functions from
+        # android2po.convert.
+        content = '<resources>'
+        for k, v in data.iteritems():
+            content += '<string name="%s">%s</string>' % (k, v)
+        content += '</resources>'
+
+        dirname = 'values'
+        if lang:
+            dirname = "%s-%s" % (dirname, lang)
+        mkfile(self.p(self.resource_dir, dirname, '%s.xml' % kind), content)
+
     def program(self, command=None, kwargs={}):
         """Run android2po in this project's working directory.
         """
@@ -66,11 +78,17 @@ class TempProject(object):
         if command:
             args.append(command)
         for k, v in kwargs.iteritems():
-            if v is True:
+            if v is True or not v:
                 args.append(k)
             else:
-                args.append("%s=%s" % (k, v))
+                if not isinstance(v, (list, tuple)):
+                    # A tuple may be used to pass the same argument multiple
+                    # times with different values.
+                    v = [v]
+                for w in v:
+                    args.append("%s=%s" % (k, w))
 
+        # argparse likes to write to stderr, capture that output.
         old_cwd = os.getcwd()
         old_stderr = sys.stderr
         os.chdir(self.dir)
@@ -79,6 +97,7 @@ class TempProject(object):
             try:
                 ret = a2po.main(args)
             except SystemExit, e:
+                # argparse likes to raise this if arguments are invalid.
                 raise RuntimeError('SystemExit raised by program: %s', e)
             else:
                 if ret:
@@ -88,11 +107,11 @@ class TempProject(object):
             sys.stderr = old_stderr
 
     def get_po(self, l):
-        f = open(join(self.locale_dir, '%s' % l), 'r')
+        file = open(join(self.locale_dir, '%s' % l), 'rb')
         try:
-            return f.readlines()
+            return pofile.read_po(file)
         finally:
-            f.close()
+            file.close()
 
 
 class ProgramTest(object):
