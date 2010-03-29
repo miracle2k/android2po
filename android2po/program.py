@@ -36,8 +36,8 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(add_help=True,
         description='Convert Android string resources to gettext .po '+
                     'files, an import them back.',
-        epilog='Written by: Michael Elsdoerfer <michael@elsdoerfer.com>',
-        version=get_version())
+        epilog='Written by: Michael Elsdoerfer <michael@elsdoerfer.com>')
+    parser.add_argument('--version', action='version', version=get_version())
 
     # Create parser for arguments shared by all commands.
     base_parser = argparse.ArgumentParser(add_help=False)
