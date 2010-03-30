@@ -60,11 +60,23 @@ class Config(object):
          'kwargs': {'action': 'store_true',}
         },
         {'name': 'require-min-complete',
-         'help': 'ignore a .po file completely if it doesn\'t have at least '+
-                 'the given percentage of translations',
+         'help': 'ignore a language\'s .po file(s) completely if there '+
+                 'aren\'t at lesat the given percentage of translations',
          'dest': 'min_completion',
          'default': 0,
          'kwargs': {'metavar': 'FLOAT', 'type': percentage}
+        },
+        {'name': 'domain',
+         'help': 'gettext do domain to use, affects the .po filenames',
+         'dest': 'domain',
+         'default': None,
+        },
+        {'name': 'layout',
+         'help': 'how and where .po files are stored; may be "default", '+
+                  '"gnu", or a custom path using the variables %%(locale)s '+
+                  '%%(domain)s and optionally %%(group)s',
+         'dest': 'layout',
+         'default': 'default',
         },
     )
 

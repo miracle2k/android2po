@@ -39,9 +39,10 @@ class Language(object):
                              'values-%s/%s.xml' % (android_code, kind))
 
     def po(self, kind):
-        filename = '%s.po' % self.code
-        if len(self.env.xmlfiles) > 1:
-            filename = "%s-%s" % (kind, filename)
+        filename = self.env.config.layout % {
+            'group': kind,
+            'domain': self.env.config.domain or 'android',
+            'locale': self.code}
         return self.env.path(self.env.gettext_dir, filename)
 
     def __unicode__(self):
@@ -303,3 +304,28 @@ class Environment(object):
                 else:
                     compiled_list.append(re.compile("^%s$" % re.escape(ignore)))
         self.config.ignores = compiled_list
+
+        # Validate the layout option, and resolve magic constants ("gnu")
+        # to an actual format string.
+        layout = self.config.layout
+        multiple_pos = len(self.xmlfiles) > 1
+        if not layout or layout == 'default':
+            if self.config.domain and multiple_pos:
+                layout = '%(domain)s-%(group)s-%(locale)s.po'
+            elif self.config.domain:
+                layout = '%(domain)s-%(locale)s.po'
+            else:
+                layout = '%(locale)s.po'
+        elif layout == 'gnu':
+            if multiple_pos:
+                layout = '%(locale)s/LC_MESSAGES/%(group)s-%(domain)s.po'
+            else:
+                layout = '%(locale)s/LC_MESSAGES/%(domain)s.po'
+        else:
+            if not '%(locale)s' in layout:
+                raise EnvironmentError('locale missing')
+            if self.config.domain and not '%(domain)s' in layout:
+                raise EnvironmentError('domain missing')
+            if multiple_pos and not '%(group)s' in layout:
+                raise EnvironmentError('group missing')
+        self.config.layout = layout
