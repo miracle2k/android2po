@@ -26,6 +26,9 @@ whole environment handling, the way the config file is detected, it's
 interaction with the arguments passed on the command line; how the
 list of languages read etc.
 
+We would like to support comments in the XML file that can be used to
+pass along information for the translator.
+
 Support "values-en-rUS-finger"-style resource directories. We could do
 this by adding a comment to each string indicating the source directory
 and/or file (allowing us to handle files like, say, arrays.xml as well).
