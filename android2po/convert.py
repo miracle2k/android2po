@@ -1,4 +1,18 @@
 """Contains the functions that do the hard work.
+
+TODO: I would like to refactor this at some point. Right now, the xml=>po
+process is already split into the read_xml() to convert an XML file into
+a dict representation, and then converting this dict into a catalog.
+
+You'd like to split the write process in the base way, so that we can write
+Android resources XMLs by simply giving the data as a dict.
+
+Here's how it could look like:
+
+[FILE/STRING] -> read_xml [DICT] -> xml2po -> [CATALOG] -> po2xml -> [DICT] -> write_xml/build_xml
+
+xml2po would be split from read_xml() for good, i.e. it would only accept
+dicts, not filenames or file objects.
 """
 
 from itertools import chain
