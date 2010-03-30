@@ -453,7 +453,7 @@ class ImportCommand(Command):
                 continue
 
             if not language_po.exists():
-                self.w.action('skipped', language_xml)
+                action.done('skipped')
                 self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
                 continue
 
