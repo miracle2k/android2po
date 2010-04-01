@@ -8,12 +8,6 @@ language being requested.
 
 Options we would like to support:
 	- ability to pull .po header fields into messages
-	- specify a gettext domain to use
-	- specify the gettext directory layout, based on the domain:
-		* domain-de.po
-		* domain/de.po
-		* de/domain.po
-		* de/LC_MESSAGES/domain.po
    - option to emulate "always quote" mode, emulating the behavior of what
 	  seems to be an converter Google uses internally, which quotes all
 	  strings, regardless if they contain any content that would benefit
@@ -21,10 +15,9 @@ Options we would like to support:
 	- option to automatically ignore messages that only contain a variable
 	  reference, like  <string name="app_name">@string/app_name</string>
 
-There are large area of code that we currently don't test; mostly the
-whole environment handling, the way the config file is detected, it's
-interaction with the arguments passed on the command line; how the
-list of languages read etc.
+There are some areas of code that we currently don't test; mostly the
+basic environment handling (detecting config file etc). Also, coverage
+reports indicate that the export command is largly untested.
 
 We would like to support comments in the XML file that can be used to
 pass along information for the translator.
