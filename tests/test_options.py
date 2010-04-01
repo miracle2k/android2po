@@ -2,7 +2,7 @@
 """
 
 from nose.tools import assert_raises
-from tests.helpers import ProgramTest, SystemExitCaught
+from tests.helpers import ProgramTest, SystemExitCaught, NonZeroReturned
 from babel.messages import Catalog
 
 
@@ -194,3 +194,96 @@ class TestIgnoreMinComplete(ProgramTest):
         p = self.setup_project()
         assert_raises(SystemExitCaught, p.program, 'import', {'--require-min-complete': '3'})
         assert_raises(SystemExitCaught, p.program, 'import', {'--require-min-complete': 'asdf'})
+
+
+class TestLayoutAndDomain(ProgramTest):
+    """Test the --layout and --domain options.
+    """
+
+    def test_default_layout(self):
+        """The default layout."""
+        p = self.setup_project(languages=['de'])
+        p.program('init')
+        p.get_po('de.po')
+
+    def test_default_with_groups(self):
+        """The default while groups are being used.
+        """
+        p = self.setup_project(languages=['de'])
+        p.write_xml({}, kind='arrays')
+        p.program('init')
+        p.get_po('arrays-de.po')
+
+    def test_default_with_domain(self):
+        """The default when a domain is given.
+        """
+        p = self.setup_project(languages=['de'])
+        p.program('init', {'--domain': 'a2potest'})
+        p.get_po('a2potest-de.po')
+
+    def test_default_with_groups_and_domain(self):
+        """The default with both groups being used and a domain given.
+        """
+        p = self.setup_project(languages=['de'])
+        p.write_xml({}, kind='arrays')
+        p.program('init', {'--domain': 'a2potest'})
+        p.get_po('a2potest-arrays-de.po')
+
+    def test_gnu(self):
+        """Test --layout gnu.
+        """
+        p = self.setup_project(languages=['de'])
+        p.program('init', {'--layout': 'gnu'})
+        p.get_po('de/LC_MESSAGES/android.po')
+
+    def test_gnu_with_groups(self):
+        """Test --layout gnu.
+        """
+        p = self.setup_project(languages=['de'])
+        p.write_xml({}, kind='arrays')
+        p.program('init', {'--layout': 'gnu'})
+        p.get_po('de/LC_MESSAGES/strings-android.po')
+
+    def test_gnu_with_domain(self):
+        """Test --layout gnu.
+        """
+        p = self.setup_project(languages=['de'])
+        p.program('init', {'--layout': 'gnu', '--domain': 'a2potest'})
+        p.get_po('de/LC_MESSAGES/a2potest.po')
+
+    def test_gnu_with_groups_and_domain(self):
+        """Test --layout gnu.
+        """
+        p = self.setup_project(languages=['de'])
+        p.write_xml({}, kind='arrays')
+        p.program('init', {'--layout': 'gnu', '--domain': 'a2potest'})
+        p.get_po('de/LC_MESSAGES/strings-a2potest.po')
+
+    def test_custom_requires_locale(self):
+        """A custom --layout always requires a "locale" placeholder.
+        """
+        p = self.setup_project(languages=['de'])
+        assert_raises(NonZeroReturned,
+                      p.program, 'init', {'--layout': 'mylocation.po'})
+        p.program('init', {'--layout': '%(locale)s.po'})
+
+    def test_custom_requires_domain_var(self):
+        """A custom --layout requires a "domain" placeholder if a custom
+        domain is given.
+        """
+        p = self.setup_project(languages=['de'])
+        assert_raises(NonZeroReturned,
+                      p.program, 'init', {'--domain': 'a2potest',
+                                          '--layout': '%(locale)s.po'})
+        p.program('init', {'--domain': 'a2potest',
+                           '--layout': '%(locale)s-%(domain)s.po'})
+
+    def test_custom_requires_group_var(self):
+        """A custom --layout requires a "group" placeholder if groups
+        are being used.
+        """
+        p = self.setup_project(languages=['de'])
+        p.write_xml({}, kind='arrays')
+        assert_raises(NonZeroReturned,
+                      p.program, 'init', {'--layout': '%(locale)s.po'})
+        p.program('init', {'--layout': '%(locale)s-%(group)s.po'})

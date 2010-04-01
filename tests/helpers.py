@@ -8,11 +8,15 @@ from android2po import program as a2po
 from android2po.convert import read_xml
 
 
-__all__ = ('ProgramTest', 'TempProject', 'SystemExitCaught')
+__all__ = ('ProgramTest', 'TempProject', 'SystemExitCaught', 'NonZeroReturned',)
 
 
 
 class SystemExitCaught(Exception):
+    pass
+
+
+class NonZeroReturned(Exception):
     pass
 
 
@@ -120,7 +124,7 @@ class TempProject(object):
                 raise SystemExitCaught('SystemExit raised by program: %s', e)
             else:
                 if ret:
-                    raise RuntimeError('Program returned non-zero: %d', ret)
+                    raise NonZeroReturned('Program returned non-zero: %d', ret)
         finally:
             os.chdir(old_cwd)
             sys.stderr = old_stderr
