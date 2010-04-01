@@ -53,11 +53,18 @@ def xml2string(xmldom):
                           encoding=ENCODING, pretty_print=True)
 
 
-def read_xml(action, file):
+def read_xml(action, filename):
     """Wrapper around the base read_xml() that pipes warnings
     into the given action.
+
+    Also handles errors and returns false if the file is invalid.
     """
-    return convert.read_xml(file, warnfunc=action.message)
+    try:
+        return convert.read_xml(filename, warnfunc=action.message)
+    except convert.InvalidResourceError, e:
+        action.done('failed')
+        action.message('Failed parsing "%s": %s' % (filename.rel, e), 'error')
+        return False
 
 
 def xml2po(env, action, *a, **kw):
@@ -200,31 +207,72 @@ class InitCommand(Command):
                             help='Language code to initialize. If none given, all '+
                             'languages lacking a .po file will be initialized.')
 
-    def generate_templates(self, update=True):
-        """Generate the .pot templates. Returns the catalog objects as a
-        kind -> catalog dict.
+    def make_or_get_template(self, kind, read_action=None, do_write=False,
+                             update=True):
+        """Return the .pot template file (as a Catalog) for the given kind.
 
-        TODO: Write a test that this happens during both the "export"
-        and the "init" command (the latter is new).
+        If ``do_write`` is given, the template file will be saved in the
+        proper location. If ``update`` is ``False``, then an existing file
+        will not be overridden, however.
+
+        If ``do_write`` is disabled, then you need to given ``read_action``,
+        the action which needs the template. This is so we can fail the
+        proper action if generating the template goes wrong.
+
+        Once generated, the template will be cached as a class member,
+        and on subsequent access the cached version is returned.
         """
-        env = self.env
-        default_catalogs = {}
+        # Implement caching - only generate the catalog the first time
+        # this function is called.
+        if not hasattr(self, '_template_catalogs'):
+            self._template_catalogs = {}
+
+        if kind in self._template_catalogs:
+            return self._template_catalogs[kind], False
+
+        # Only one, xor the other.
+        assert read_action or do_write and not (read_action and do_write)
+
+        template_pot = self.env.default.po(kind)
+        if do_write:
+            action = self.w.begin(template_pot)
+        else:
+            action = read_action
+
+        # Read the XML, bail out if that fails
+        xmldata = read_xml(action, self.env.default.xml(kind))
+        if xmldata is False:
+            return False, False
+
+        # Actually generate the catalog
+        template_catalog = xml2po(self.env, action, xmldata)
+        self._template_catalogs[kind] = template_catalog
+
+        # Write the catalog as a template to disk if necessary.
         something_written = False
-        for kind in self.env.xmlfiles:
-            template_pot = self.env.default.po(kind)
-            action = None
-            if not env.config.no_template:
-                action = self.w.begin(template_pot)
-            default_catalog = xml2po(self.env, action, self.env.default.xml(kind))
-            default_catalogs[kind] = default_catalog
-            if not env.config.no_template:
-                # Note that this is always rendered with "ignore_exists",
-                # i.e. we only log this action if we change the template.
-                if write_file(self, template_pot,
-                              content=lambda: catalog2string(default_catalog),
-                              action=action, ignore_exists=True, update=update):
+        if do_write:
+            # Note that this is always rendered with "ignore_exists",
+            # i.e. we only log this action if we change the template.
+            if write_file(self, template_pot,
+                          content=lambda: catalog2string(template_catalog),
+                          action=action, ignore_exists=True, update=update):
+                something_written = True
+
+        return template_catalog, something_written
+
+    def generate_templates(self, update=True):
+        """Generate the template files.
+
+        Do this only if they are not disabled.
+        """
+        something_written = False
+        if not self.env.config.no_template:
+            for kind in self.env.xmlfiles:
+                _, write_happend = self.make_or_get_template(
+                    kind, do_write=True, update=update)
+                if write_happend:
                     something_written = True
-        return default_catalogs, something_written
+        return something_written
 
     def generate_po(self, target_po_file, default_data, action,
                     language_data=None, language_data_files=None,
@@ -304,8 +352,15 @@ class InitCommand(Command):
                     continue
             else:
                 language_data = read_xml(action, language_xml)
+                if language_data == False:
+                    # File was invalid
+                    continue
 
             template_data = read_xml(action, self.env.default.xml(kind))
+            if template_data is False:
+                # File was invalid
+                continue
+
             yield action, language_po, template_data, language_data, [language_xml]
 
     def execute(self):
@@ -320,7 +375,8 @@ class InitCommand(Command):
 
         # First, make sure the templates exist. This makes the "init"
         # command everything needed to boostrap.
-        _, something_done = self.generate_templates(update=False)
+        # TODO: Test that this happens.
+        something_done = self.generate_templates(update=False)
 
         # Only show [exists] actions if a specific language was requested.
         show_exists = not bool(env.options.language)
@@ -367,10 +423,10 @@ class ExportCommand(InitCommand):
         # template generation is disabled, we still need to have the
         # catalogs at least in memory for the updating process later on.
         #
-        # TODO: Should this really be generated in every case, or do we
-        # want to enable the user to set fixed meta data, and simply
-        # merge subsequent updates in?
-        default_catalogs, _ = self.generate_templates()
+        # TODO: Do we really want to regenerate the templates every
+        # time, or should the user be able to set fixed meta data, and
+        # we simply merge subsequent updates in?
+        self.generate_templates()
 
         initial_warning = False
 
@@ -399,7 +455,11 @@ class ExportCommand(InitCommand):
                     # init and during language collection.
                     action.done('failed', status='%s is not a valid locale' % language.code)
                 else:
-                    lang_catalog.update(default_catalogs[kind])
+                    catalog, _ = self.make_or_get_template(kind, action)
+                    if not catalog:
+                        # Something weng wrong parsing the catalog
+                        continue
+                    lang_catalog.update(catalog)
                     # TODO: Should we include previous?
                     write_file(self, target_po,
                                catalog2string(lang_catalog, include_previous=False),

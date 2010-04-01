@@ -21,7 +21,11 @@ from lxml import etree
 from babel.messages import Catalog
 
 
-__all__ = ('xml2po', 'po2xml', 'read_xml')
+__all__ = ('xml2po', 'po2xml', 'read_xml', 'InvalidResourceError',)
+
+
+class InvalidResourceError(Exception):
+    pass
 
 
 WHITESPACE = ' \n\t'     # Whitespace that we collapse
@@ -212,9 +216,7 @@ def read_xml(file, warnfunc=dummy_warn):
     try:
         doc = etree.parse(file)
     except etree.XMLSyntaxError, e:
-        print "Error: Parsing xml failed: %s" % e
-        # Return empty
-        return result
+        raise InvalidResourceError(e)
 
     for tag in doc.xpath('/resources/*[self::string or self::string-array or self::plurals]'):
         if not 'name' in tag.attrib:

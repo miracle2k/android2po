@@ -1,6 +1,7 @@
 from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
+from nose.tools import assert_raises
 from android2po import xml2po, po2xml
 from helpers import ProgramTest
 
@@ -111,3 +112,18 @@ class TestDealWithBrokenInput(ProgramTest):
         p.write_xml(data="""<resources><string name="s1">value</string></resources>""", lang='de')
         assert 'string-array in the reference' in self.runprogram(p, 'init')
         assert len(p.get_po('template.pot')) == 1
+
+    def test_invalid_resource_xml(self):
+        """Resource xml files are so broken we can't parse them.
+        """
+        # Invalid language resource
+        p = self.setup_project(languages=['de'])
+        p.write_xml(data="""<resources><string name="s1"> ...""", lang='de')
+        assert 'Failed parsing' in self.runprogram(p, 'init')
+        assert_raises(IOError, p.get_po, 'de.po')
+
+        # Invalid default resource
+        p = self.setup_project()
+        p.write_xml(data="""<resources><string name="s1"> ...""")
+        assert 'Failed parsing' in self.runprogram(p, 'init')
+        assert_raises(IOError, p.get_po, 'template.pot')
