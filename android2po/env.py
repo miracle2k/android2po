@@ -314,6 +314,8 @@ class Environment(object):
                 layout = '%(domain)s-%(group)s-%(locale)s.po'
             elif self.config.domain:
                 layout = '%(domain)s-%(locale)s.po'
+            elif multiple_pos:
+                layout = '%(group)s-%(locale)s.po'
             else:
                 layout = '%(locale)s.po'
         elif layout == 'gnu':
