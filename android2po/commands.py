@@ -53,7 +53,14 @@ def xml2string(xmldom):
                           encoding=ENCODING, pretty_print=True)
 
 
-def xml2po(env, *a, **kw):
+def read_xml(action, file):
+    """Wrapper around the base read_xml() that pipes warnings
+    into the given action.
+    """
+    return convert.read_xml(file, warnfunc=action.message)
+
+
+def xml2po(env, action, *a, **kw):
     """Wrapper around the base xml2po() that uses the filters configured
     by the environment.
     """
@@ -62,10 +69,12 @@ def xml2po(env, *a, **kw):
             if filter.match(name):
                 return True
     kw['filter'] = xml_filter
+    if action:
+        kw['warnfunc'] = action.message
     return convert.xml2po(*a, **kw)
 
 
-def po2xml(env, *a, **kw):
+def po2xml(env, action, *a, **kw):
     """Wrapper around the base po2xml() that uses the filters configured
     by the environment.
     """
@@ -73,6 +82,7 @@ def po2xml(env, *a, **kw):
         if env.config.ignore_fuzzy and message.fuzzy:
             return True
     kw['filter'] = po_filter
+    kw['warnfunc'] = action.message
     return convert.po2xml(*a, **kw)
 
 
@@ -202,9 +212,10 @@ class InitCommand(Command):
         something_written = False
         for kind in self.env.xmlfiles:
             template_pot = self.env.default.po(kind)
+            action = None
             if not env.config.no_template:
                 action = self.w.begin(template_pot)
-            default_catalog = xml2po(self.env, self.env.default.xml(kind))
+            default_catalog = xml2po(self.env, action, self.env.default.xml(kind))
             default_catalogs[kind] = default_catalog
             if not env.config.no_template:
                 # Note that this is always rendered with "ignore_exists",
@@ -215,8 +226,9 @@ class InitCommand(Command):
                     something_written = True
         return default_catalogs, something_written
 
-    def generate_po(self, target_po_file, default_data, language_data=None,
-                    language_data_files=None, update=True, ignore_exists=False):
+    def generate_po(self, target_po_file, default_data, action,
+                    language_data=None, language_data_files=None,
+                    update=True, ignore_exists=False):
         """Helper to generate a .po file.
 
         ``default_data`` is the collective data from the language neutral XML
@@ -232,15 +244,14 @@ class InitCommand(Command):
         If ``update`` is not set than we will bail out early
         if the file doesn't exist.
         """
-        action = self.w.begin(target_po_file)
-
         # This is a function so that it only will be run if write_file()
         # actually needs it.
         def make_catalog():
             if language_data is not None:
                 action.message('Using existing translations from %s' % ", ".join(
                     [l.rel for l in language_data_files]))
-                lang_catalog, unmatched = xml2po(self.env, default_data,
+                lang_catalog, unmatched = xml2po(self.env, action,
+                                                 default_data,
                                                  language_data)
                 if unmatched:
                     action.message("Existing translation XML files for this "
@@ -249,7 +260,7 @@ class InitCommand(Command):
             else:
                 action.message('No corresponding XML exists, generating catalog '+
                                'without translations')
-                lang_catalog = xml2po(self.env, default_data)
+                lang_catalog = xml2po(self.env, action, default_data)
 
             catalog = catalog2string(lang_catalog)
 
@@ -263,7 +274,8 @@ class InitCommand(Command):
                           ignore_exists=ignore_exists)
 
     def _iterate(self, language, require_translation=True):
-        """Yield 4-tuples in the form of: (
+        """Yield 5-tuples in the form of: (
+            action object,
             target .po file,
             source xml data,
             translated xml data,
@@ -279,19 +291,22 @@ class InitCommand(Command):
             language_po = language.po(kind)
             language_xml = language.xml(kind)
 
+            action = self.w.begin(language_po)
+
             language_data = None
             if not language_xml.exists():
                 if require_translation:
                     # It's easily possible that say a arrays.xml only
                     # exists in values/, but not in values-xx/.
-                    self.w.action('skipped', language_po)
-                    self.w.message('%s doesn\'t exist' % language_po.rel)
+                    action.done('skipped')
+                    action.message('%s doesn\'t exist' % language_po.rel,
+                                   'warning')
                     continue
             else:
-                language_data = convert.read_xml(language_xml)
+                language_data = read_xml(action, language_xml)
 
-            template_data = convert.read_xml(self.env.default.xml(kind))
-            yield language_po, template_data, language_data, [language_xml]
+            template_data = read_xml(action, self.env.default.xml(kind))
+            yield action, language_po, template_data, language_data, [language_xml]
 
     def execute(self):
         env = self.env
@@ -314,11 +329,13 @@ class InitCommand(Command):
             # For each language, generate a .po file. In case a language
             # already exists (that is, it's xml files exist, use the
             # existing translations for the new gettext catalog).
-            for (target_po,
+            for (action,
+                 target_po,
                  template_data,
                  lang_data,
                  lang_files) in self._iterate(language, require_translation=False):
-                if self.generate_po(target_po, template_data, lang_data, lang_files,
+                if self.generate_po(target_po, template_data, action,
+                                    lang_data, lang_files,
                                     update=False,
                                     ignore_exists=show_exists):
                     something_done = True
@@ -443,9 +460,8 @@ class ImportCommand(Command):
                 # TODO: Creating a catalog object here is kind of clunky.
                 # Idially, we'd refactor convert.py so that we can use a
                 # dict to represent a resource XML file.
-                write_file(self, language_xml,
-                       xml2string(po2xml(self.env, Catalog(locale=language.code))),
-                       action=False)
+                xmldata = po2xml(self.env, action, Catalog(locale=language.code))
+                write_file(self, language_xml, xml2string(xmldata), action=False)
                 action.done('skipped', status=('%s catalogs aren\'t '
                                                'complete enough - %.2f done' % (
                                                    language.code,
@@ -457,8 +473,9 @@ class ImportCommand(Command):
                 self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
                 continue
 
-            write_file(self, language_xml,
-                       xml2string(po2xml(self.env, catalogs[kind])),
+            write_file(self,
+                       language_xml,
+                       xml2string(po2xml(self.env, action, catalogs[kind])),
                        action=action)
 
     def execute(self):

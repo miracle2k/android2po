@@ -1,5 +1,9 @@
 import os, sys
 from os.path import join, dirname, exists
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 import tempfile
 import shutil
 
@@ -25,6 +29,18 @@ def mkfile(path, content=''):
     f.write(content)
     f.flush()
     f.close()
+
+
+class Tee(object):
+    """Return a stdout-compatible object that will pipe data written
+    into it to all of the file-objects in ``args``."""
+
+    def __init__(self, *args):
+        self.args = args
+
+    def write(self, data):
+        for f in self.args:
+            f.write(data)
 
 
 class TempProject(object):
@@ -72,12 +88,15 @@ class TempProject(object):
         mkfile(self.p('.android2po'), config)
 
     def write_xml(self, data={}, lang=None, kind='strings'):
-        # Could use the more robust XML writing functions from
-        # android2po.convert.
-        content = '<resources>'
-        for k, v in data.iteritems():
-            content += '<string name="%s">%s</string>' % (k, v)
-        content += '</resources>'
+        if isinstance(data, basestring):
+            content = data
+        else:
+            # Could use the more robust XML writing functions from
+            # android2po.convert.
+            content = '<resources>'
+            for k, v in data.iteritems():
+                content += '<string name="%s">%s</string>' % (k, v)
+            content += '</resources>'
 
         folder = 'values'
         if lang:
@@ -96,6 +115,8 @@ class TempProject(object):
 
     def program(self, command=None, kwargs={}):
         """Run android2po in this project's working directory.
+
+        Return the program output.
         """
         args = ['a2po-test']
         if command:
@@ -111,10 +132,17 @@ class TempProject(object):
                 for w in v:
                     args.append("%s=%s" % (k, w))
 
-        # argparse likes to write to stderr, capture that output.
         old_cwd = os.getcwd()
-        old_stderr = sys.stderr
         os.chdir(self.dir)
+        # Sometimes we might want to check a certain message was printed
+        # out, so in addition to having nose capture the output, we
+        # want to as well.
+        old_stdout = sys.stdout
+        stdout_capture = StringIO.StringIO()
+        sys.stdout = Tee(sys.stdout, stdout_capture)
+        # argparse likes to write to stderr, let it be handled like
+        # normal stdout (i.e. captured by nose as well as us).
+        old_stderr = sys.stderr
         sys.stderr = sys.stdout
         try:
             try:
@@ -125,8 +153,10 @@ class TempProject(object):
             else:
                 if ret:
                     raise NonZeroReturned('Program returned non-zero: %d', ret)
+                return stdout_capture.getvalue()
         finally:
             os.chdir(old_cwd)
+            sys.stdout = old_stdout
             sys.stderr = old_stderr
 
     def get_po(self, filename):
@@ -136,11 +166,15 @@ class TempProject(object):
         finally:
             file.close()
 
-    def get_xml(self, lang=None, kind='strings'):
+    def get_xml(self, lang=None, kind='strings', raw=False):
         dirname = 'values'
         if lang:
             dirname = "%s-%s" % (dirname, lang)
-        return read_xml(self.p(self.resource_dir, dirname, '%s.xml' % kind))
+        filename = self.p(self.resource_dir, dirname, '%s.xml' % kind)
+        if raw:
+            return open(filename).read()
+        else:
+            return read_xml(filename)
 
 
 class ProgramTest(object):

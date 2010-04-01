@@ -28,6 +28,12 @@ WHITESPACE = ' \n\t'     # Whitespace that we collapse
 EOF = None
 
 
+# The methods here sometimes need to notify the caller about warnings
+# processing on; this is why they all take a ``warn_func`` argument.
+# By default, if no warnfunc is passed, this dummy will be used.
+dummy_warn = lambda message, severity=None: None
+
+
 def get_element_text(tag):
     """Return the contents of the lxml ``element``, with the Android
     specific stuff decoded.
@@ -194,7 +200,7 @@ def get_element_text(tag):
     return value
 
 
-def read_xml(file):
+def read_xml(file, warnfunc=dummy_warn):
     """Load all resource names from an Android strings.xml resource file.
 
     The result is a dict of ``name => value``, `with ``value`` being
@@ -215,7 +221,8 @@ def read_xml(file):
             continue
         name = tag.attrib['name']
         if name in result:
-            print "Error: %s contains duplicate string names: %s" % (filename, name)
+            warnfunc('Duplicate resource id found: %s, ignoring.' % name,
+                     'warning')
             continue
 
         if tag.tag == 'string':
@@ -233,7 +240,7 @@ def read_xml(file):
     return result
 
 
-def xml2po(file, translations=None, filter=None):
+def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
     """Return the Android string resource in ``file`` as a babel
     .po catalog.
 
@@ -246,12 +253,12 @@ def xml2po(file, translations=None, filter=None):
     Both arguments may also be an already loaded dict of xml strings,
     as returned by ``read_xml``.
     """
-    original_strings = file if isinstance(file, dict) else read_xml(file)
+    original_strings = file if isinstance(file, dict) else read_xml(file, warnfunc)
     trans_strings = None
     if translations is not None:
         trans_strings = translations \
                       if isinstance(translations, dict) \
-                      else read_xml(translations)
+                      else read_xml(translations, warnfunc)
 
     catalog = Catalog()
     for name, org_value in original_strings.iteritems():
@@ -265,12 +272,12 @@ def xml2po(file, translations=None, filter=None):
         if isinstance(org_value, list):
             # a string-array, write as "name:index"
             if len(org_value) == 0:
-                print "The string-array '%s' is empty" % name
+                warnfunc("Warning: string-array '%s' is empty" % name, 'warning')
                 continue
 
             if trans_value and not isinstance(trans_value, list):
-                print ("'%s' is a string-array in the reference file, "
-                      "but not in the translation.") % name
+                warnfunc(('""%s" is a string-array in the reference file, '
+                          'but not in the translation.') % name, 'warning')
                 # makes further processing easier if we can assume
                 # this is a list
                 trans_value = []
@@ -297,7 +304,7 @@ def xml2po(file, translations=None, filter=None):
         return catalog
 
 
-def write_to_dom(elem_name, value, message):
+def write_to_dom(elem_name, value, message, warnfunc=dummy_warn):
     """Create a DOM object with the tag name ``elem_name``, containing
     the string ``value`` formatted according to Android XML rules.
 
@@ -337,7 +344,8 @@ def write_to_dom(elem_name, value, message):
         elem = etree.fromstring(value_to_parse)
     except etree.XMLSyntaxError, e:
         elem = etree.fromstring(value_to_parse, loose_parser)
-        print "Error: Translation contains invalid XHTML (for resource %s): %s" % (message.context, e)
+        warnfunc(('Message %s contains invalid XHTML (%s); Falling back to '
+                  'loose parser.') % (message.context, e), 'warning')
 
     def quote(text):
         """Return ``text`` surrounded by quotes if necessary.
@@ -388,7 +396,7 @@ def write_to_dom(elem_name, value, message):
     return elem
 
 
-def po2xml(catalog, with_untranslated=False, filter=None):
+def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     """Convert the gettext catalog in ``catalog`` to an XML DOM.
 
     This currently relies entirely in the fact that we can use the context
@@ -427,7 +435,9 @@ def po2xml(catalog, with_untranslated=False, filter=None):
             continue
 
         if not message.context:
-            print "Error: Message without a context %s" % message.id
+            warnfunc(('Ignoring message "%s": has no context; somebody other '+
+                      'than android2po seems to have added to this '+
+                      'catalog.') % message.id, 'error')
             continue
 
         if filter and filter(message):
@@ -443,7 +453,9 @@ def po2xml(catalog, with_untranslated=False, filter=None):
             name, index = message.context.split(':', 2)
             xml_tree.setdefault(name, {})
             if index in xml_tree[name]:
-                raise IndexError('string-array duplicate index')
+                warnfunc(('Duplicate index %s in array "%s"; ignoring '+
+                          'the message. The catalog has possibly been '+
+                          'corrupted.') % (index, name), 'error')
             xml_tree[name][index] = value
         else:
             xml_tree[message.context] = value
@@ -456,12 +468,12 @@ def po2xml(catalog, with_untranslated=False, filter=None):
             array_el = etree.Element('string-array')
             array_el.attrib['name'] = name
             for k in sorted(value):
-                item_el = write_to_dom('item', value[k], message)
+                item_el = write_to_dom('item', value[k], message, warnfunc)
                 array_el.append(item_el)
             root_el.append(array_el)
         else:
             # standard string
-            string_el = write_to_dom('string', value, message)
+            string_el = write_to_dom('string', value, message, warnfunc)
             string_el.attrib['name'] = name
             root_el.append(string_el)
     return root_el
