@@ -249,7 +249,7 @@ class Writer():
     def _print_action(self, action, force=False):
         """Print the action and all it's attached messages.
         """
-        if force or self.allowed(action.severity):
+        if force or self.allowed(action.severity) or action.messages:
             self._print_action_header(action)
             for m, severity in action.messages:
                 self._print_message(m, severity)
