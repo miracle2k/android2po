@@ -426,6 +426,10 @@ def po2xml(catalog, with_untranslated=False, filter=None):
             # Untranslated.
             continue
 
+        if not message.context:
+            print "Error: Message without a context %s" % message.id
+            continue
+
         if filter and filter(message):
             continue
 
