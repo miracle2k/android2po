@@ -17,7 +17,7 @@ Requirements
 The following Python modules are required, but will mostly be
 auto-installed. See ``Installation`` below.
 
-babel > 0.9.4 (with context support; currently, this means using an SVN checkout)
+babel >= 1.0dev (only the dev version has support for contexts)
     http://babel.edgewall.org/
 
 lxml
@@ -33,16 +33,27 @@ that's what you're gettext software will have to support as well.
 Installation
 ------------
 
+To install the current release, you can simply do:
+
+    $ easy_install android2po
+
+That's it!
+
+If you want to install the current development version of
+``android2po`` instead, get the source code, then run:
+
     $ python setup.py install
 
-
-To install the dependencies, in particular the SVN version of babel, you
-can use ``pip``:
+``setup.py`` should automatically install all the dependencies.
+Alternatively, you can also use pip if you prefer:
 
     $ pip install -r requirements.pip
 
-Afterwards, to finish the setup of the babel SVN version, make sure you
-follow this guide:
+Note: The development version of babel is required. Installing the
+dev version is a bit complicated than usually, so both the ``setup.py``
+file and the ``requirements.pip`` file link to a custom distribution
+I made for android2po. If you prefer to install the babel SVN version
+yourself, you need to follow the instructions on this page:
 
     http://babel.edgewall.org/wiki/SubversionCheckout
 

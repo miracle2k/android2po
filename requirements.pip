@@ -3,5 +3,5 @@
 lxml
 argparse==1.1
 
-# We need the SVN version to get context support, the last release is ages ago.
--e svn+http://svn.edgewall.org/repos/babel/trunk#egg=babel
+# This is a custom build of th dev version that has context support
+http://elsdoerfer.name/download/android2po/files/Babel-1.0dev.tar.gz
