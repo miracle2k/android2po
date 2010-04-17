@@ -232,3 +232,7 @@ http://docs.oasis-open.org/xliff/v1.2/xliff-profile-po/xliff-profile-po-1.2.html
 http://www.artfulbits.com/Android/aiLocalizer.aspx
     App to localize Android xml string files directly. They seems to be
     involved with the Ukrainian translation of Android itself.
+
+http://groups.google.com/group/android-platform/browse_thread/thread/a2626195205e8543
+    Notes that Google internally manages Android translations in their
+    own system.
