@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-import os, sys
+import os, sys, re, uuid
 try:
     from hashlib import md5
 except ImportError:
@@ -10,7 +10,32 @@ from os import path
 from .termcolors import colored
 
 
-__all__ = ('Path', 'Writer', 'file_md5')
+__all__ = ('Path', 'Writer', 'file_md5', 'format_to_re',)
+
+
+def format_to_re(format):
+    """Return the regular expression that matches all possible values
+    the given Python 2 format string (using %(foo)s placeholders) can
+    possibly resolve to.
+
+    Each placeholder in the format string is captured in a named group.
+
+    The difficult part here is inserting unescaped regular expression
+    syntax in place of the format variables, while still properly
+    escaping the rest.
+
+    See this link for more info on the problem:
+    http://stackoverflow.com/questions/2654856/python-convert-format-string-to-regular-expression
+    """
+    UNIQ = uuid.uuid1().hex
+    assert not UNIQ in format
+    class MarkPlaceholders(dict):
+        def __getitem__(self, key):
+            return UNIQ+('(?P<%s>.*?)'%key)+UNIQ
+    parts = (format % MarkPlaceholders()).split(UNIQ)
+    for i in range(0, len(parts), 2):
+        parts[i] = re.escape(parts[i])
+    return ''.join(parts)
 
 
 def file_md5(filename):

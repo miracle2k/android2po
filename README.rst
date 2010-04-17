@@ -100,8 +100,11 @@ detect the location of these folders, as follows:
 * If a ``.android2po`` file is in the project directory, it automatically
   will be loaded as a configuration file. See the section below on the
   format of the configuration file, and possible values.
-* The script automatically processes all the languages found in the
-  Android resource directory.
+* The script automatically processes all the languages it can find. It
+  will normally look at the existing .po files to determine the list of
+  languages, with the exception of the ``init`` command, in which case
+  the list of languages inside the Android resource directory will be
+  used.
 
 Initial setup
 ~~~~~~~~~~~~~
@@ -164,8 +167,9 @@ You can do this step manually, or add it to your build process.
 Adding a new language
 ~~~~~~~~~~~~~~~~~~~~~
 
-As noted above, ``android2po`` will only process languages it can
-find in your resource directory. To add a new language, simply run
+As noted above, ``android2po`` will automatically process all the
+languages it can find, based on the .po files that exist. To add a
+new language, simply run
 
     $ a2po init {LANGUAGE CODES}
 
@@ -175,12 +179,13 @@ For example:
 
 This will create both new .po and strings.xml files for German and French.
 
-Of course, you are also free to simply create the appropriate
-``strings.xml`` files yourself, and let
+You are also free to simply create the appropriate ``strings.xml`` files
+yourself, and let
 
     $ a2po init
 
-initialize their proper .po counterparts.
+initialize their proper .po counterparts (in case of the ``init`` command,
+the languages found in the Android resource directory will be processed).
 
 
 Configuration file

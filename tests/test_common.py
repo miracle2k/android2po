@@ -52,7 +52,7 @@ class TestDealWithBrokenInput(ProgramTest):
     def test_nocontext(self):
         """Some strings in the .po file do not have a context set.
         """
-        p = self.setup_project(languages=['de'])
+        p = self.setup_project()
         c = self.mkcatalog()
         c.add('s', 'v',)  # no context!
         p.write_po(c, 'de.po')
@@ -62,7 +62,7 @@ class TestDealWithBrokenInput(ProgramTest):
     def test_duplicate_aray_index(self):
         """An encoded array in the .po file has the same index twice.
         """
-        p = self.setup_project(languages=['de'])
+        p = self.setup_project()
         c = self.mkcatalog()
         c.add('t1', 'v1', context='myarray:1')
         c.add('t2', 'v2', context='myarray:1')
@@ -76,7 +76,7 @@ class TestDealWithBrokenInput(ProgramTest):
         """XHTML in .po files may be invalid; a forgiving parser will be
         used as a fallback.
         """
-        p = self.setup_project(languages=['de'])
+        p = self.setup_project()
         c = self.mkcatalog()
         c.add('s', 'I am <b>bold', context='s')
         p.write_po(c, 'de.po')
@@ -106,7 +106,7 @@ class TestDealWithBrokenInput(ProgramTest):
         """A resource name is string-array in the reference file, but a
         normal string in the translation.
         """
-        p = self.setup_project(languages=['de'])
+        p = self.setup_project(xml_langs=['de'])
         # TODO: Can use dicts after .convert refactoring
         p.write_xml(data="""<resources><string-array name="s1"><item>value</item></string-array></resources>""")
         p.write_xml(data="""<resources><string name="s1">value</string></resources>""", lang='de')
@@ -117,7 +117,7 @@ class TestDealWithBrokenInput(ProgramTest):
         """Resource xml files are so broken we can't parse them.
         """
         # Invalid language resource
-        p = self.setup_project(languages=['de'])
+        p = self.setup_project(xml_langs=['de'])
         p.write_xml(data="""<resources><string name="s1"> ...""", lang='de')
         assert 'Failed parsing' in self.runprogram(p, 'init')
         assert_raises(IOError, p.get_po, 'de.po')

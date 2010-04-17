@@ -2,10 +2,11 @@ from __future__ import absolute_import
 
 import os
 import re
+import glob
 from argparse import Namespace
 from os import path
 from .config import Config
-from .utils import Path
+from .utils import Path, format_to_re
 
 
 __all__ = ('EnvironmentError', 'IncompleteEnvironment',
@@ -125,36 +126,18 @@ def find_project_dir_and_config():
     return None, None
 
 
-LANG_DIR = re.compile(r'^values(?:-(\w\w)(?:-r(\w\w))?)?$')
+def find_android_kinds(resource_dir):
+    """Return a list of Android XML resource types that are in use.
 
-def collect_languages(resource_dir):
-    """Returns a 2-tuple with (files, languages).
-
-    ``files`` is a list of the different xml files in the main values/
-    directory (strings.xml, arrays.xml),  ``languages`` a list of language
-    codes.
+    For this, we simply have a look which xml files exist in the
+    default values/ resource directory.
     """
-    languages = []
-    files = []
-    for name in os.listdir(resource_dir):
-        match = LANG_DIR.match(name)
-        if not match:
-            continue
-        filepath = path.join(resource_dir, name)
-        country, region = match.groups()
-        if country == None:
-            # Processing the default values/ directory
-            for filename in ('strings.xml', 'arrays.xml'):
-                file = path.join(filepath, filename)
-                if path.isfile(file):
-                    files.append(path.splitext(filename)[0])
-        else:
-            code = "%s" % country
-            if region:
-                code += "_%s" % region
-            languages.append(code)
-
-    return files, languages
+    kinds = []
+    for filename in ('strings.xml', 'arrays.xml'):
+        file = path.join(resource_dir, 'values', filename)
+        if path.isfile(file):
+            kinds.append(path.splitext(filename)[0])
+    return kinds
 
 
 class Environment(object):
@@ -169,7 +152,6 @@ class Environment(object):
     """
 
     def __init__(self):
-        self.languages = []
         self.xmlfiles = []
         self.default = DefaultLanguage(self)
         self.config = Config()
@@ -259,9 +241,9 @@ class Environment(object):
     def init(self):
         """Initialize the environment.
 
-        This entails loading the list of languages, and in the process
-        doing some basic validation. An ``EnvironmentError`` is thrown
-        if there is something wrong.
+        This entails finding the default Android language resource files,
+        and in the process doing some basic validation.
+        An ``EnvironmentError`` is thrown if there is something wrong.
         """
         # If either of those is not specified, we can't continue. Raise a
         # special exception that let's the caller display the proper steps
@@ -284,14 +266,11 @@ class Environment(object):
             raise EnvironmentError('Android resource direcory at "%s" doesn\'t exist.' %
                                    self.resource_dir)
 
-        # Create an environment object based on all the data we have now.
-        files, languages = collect_languages(self.resource_dir)
-        if not files:
+        # Find the Android XML resources that are our original source
+        # files, i.e. for example the values/strings.xml file.
+        self.xmlfiles = find_android_kinds(self.resource_dir)
+        if not self.xmlfiles:
             raise EnvironmentError('default language was not found.')
-
-        self.xmlfiles = files
-        for code in languages:
-            self.languages.append(Language(code, self))
 
         # If regular expressions are used as ignore filters, precompile
         # those to help speed things along. For simplicity, we also
@@ -331,3 +310,75 @@ class Environment(object):
             if multiple_pos and not '%(group)s' in layout:
                 raise EnvironmentError('group missing')
         self.config.layout = layout
+
+    LANG_DIR = re.compile(r'^values-(\w\w)(?:-r(\w\w))?$')
+    def get_android_languages(self):
+        """Finds the languages that already exist inside the Android
+        resource directory.
+
+        Return value is a list of ``Language`` instances.
+        """
+        languages = []
+        for name in os.listdir(self.resource_dir):
+            match = self.LANG_DIR.match(name)
+            if not match:
+                continue
+            filepath = path.join(self.resource_dir, name)
+            country, region = match.groups()
+            code = "%s" % country
+            if region:
+                code += "_%s" % region
+            languages.append(Language(code, self))
+        return languages
+
+    def get_gettext_languages(self):
+        """Finds the languages that already exist inside the gettext
+        directory.
+
+        This is a little more though than on the Android side, since
+        we give the user a lot of flexibility in configuring how the
+        .po files are layed out.
+
+        Return value is a list of ``Language`` instances.
+        """
+
+        # Build a glob pattern based on the layout. This will enable
+        # us to easily get a list of files that match the pattern.
+        glob_pattern = self.config.layout % {
+            'domain': self.config.domain,
+            'group': '*',
+            'locale': '*',
+        }
+
+        # Temporarily switch to the gettext directory. This allows us
+        # to simply call glob() using the relative pattern, rather than
+        # having to deal with making a full path, and then later on
+        # stripping the full path again for the regex matching, and
+        # potentially even running into problems when, say, the pattern
+        # contains references like ../ to a parent directory.
+        old_dir = os.getcwd()
+        os.chdir(self.gettext_dir)
+        try:
+            list = glob.glob(glob_pattern)
+
+            # We now have a list of matching .po files, but now idea
+            # which languages they represent, because we don't know
+            # which part of the filename is the locale. To solve this,
+            # we build a regular expression from the format string,
+            # one with a capture group where the locale code should be.
+            regex = re.compile(format_to_re(self.config.layout))
+
+            # We then try to match every single file returned by glob.
+            # In this way, we can build a list of unique locale codes.
+            languages = {}
+            for item in list:
+                m = regex.match(item)
+                if not m:
+                    continue
+                code = m.groupdict()['locale']
+                if not code in languages:
+                    languages[code] = Language(code, self)
+
+            return languages.values()
+        finally:
+            os.chdir(old_dir)

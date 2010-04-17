@@ -15,12 +15,4 @@ from helpers import ProgramTest
 
 class TestImport(ProgramTest):
 
-    def test_missing_po(self):
-        """Test that we an handle a missing .po file during import
-        without crashing.
-        """
-        p = self.setup_project(languages=['de'])
-        # Ensure that the corresponding .po file doesn't exist
-        assert_raises(IOError, p.get_po, 'de.po')
-        # Still, the program runs fine
-        p.program('import')
+    pass

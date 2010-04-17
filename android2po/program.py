@@ -198,9 +198,6 @@ def make_env_and_writer(argv):
     writer.action('info',
                   "Using as Android resource dir: %s" % env.resource_dir)
     writer.action('info', "Using as gettext dir: %s" % env.gettext_dir)
-    lstr = ", ".join(map(unicode, env.languages))
-    writer.action('info',
-                  "Found %d language(s): %s" % (len(env.languages), lstr))
 
     return env, writer
 

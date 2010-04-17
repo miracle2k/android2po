@@ -371,7 +371,7 @@ class InitCommand(Command):
             for code in env.options.language:
                 languages.append(Language(code, env))
         else:
-            languages = env.languages
+            languages = env.get_android_languages()
 
         # First, make sure the templates exist. This makes the "init"
         # command everything needed to boostrap.
@@ -430,7 +430,7 @@ class ExportCommand(InitCommand):
 
         initial_warning = False
 
-        for language in env.languages:
+        for language in env.get_gettext_languages():
             for kind in self.env.xmlfiles:
                 target_po = language.po(kind)
                 if not target_po.exists():
@@ -539,5 +539,5 @@ class ImportCommand(Command):
                        action=action)
 
     def execute(self):
-        for language in self.env.languages:
+        for language in self.env.get_gettext_languages():
             self.process(language)

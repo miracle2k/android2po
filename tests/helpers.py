@@ -49,7 +49,7 @@ class TempProject(object):
     """
 
     def __init__(self, manifest=True, resource_dir='res', locale_dir='locale',
-                 config=None, default_xml={}, languages=[]):
+                 config=None, default_xml={}, xml_langs=[]):
         self.dir = dir = tempfile.mkdtemp()
         self.locale_dir = self.p(locale_dir)
         self.resource_dir = self.p(resource_dir)
@@ -62,8 +62,8 @@ class TempProject(object):
         os.mkdir(self.locale_dir)
         os.mkdir(self.resource_dir)
         self.write_xml(default_xml)
-        # Languges which should be available by default
-        for code in languages:
+        # Language-XML files that should be created by default
+        for code in xml_langs:
             self.write_xml(lang=code)
 
     def __del__(self):
