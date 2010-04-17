@@ -39,10 +39,10 @@ class Config(object):
          'kwargs': {'action': 'store_true',}
         },
         {'name': 'template',
-         'help': 'filename to use for the .pot file(s); may contain %%s to be '+
-                 'replaced with the xml kind',
+         'help': 'filename to use for the .pot file(s); may contain the '+
+                 '%(domain)s and %(group)s variables',
          'dest': 'template_name',
-         'default': 'template.pot',
+         'default': '',
          'kwargs': {'metavar': 'NAME',}
         },
         {'name': 'ignore',

@@ -65,21 +65,10 @@ class DefaultLanguage(Language):
         return self.env.path(self.env.resource_dir, 'values/%s.xml' % kind)
 
     def po(self, kind):
-        template_name = self.env.config.template_name
-        multiple_kinds = len(self.env.xmlfiles) > 1
-
-        # If the template name configured by the user supports a variable,
-        # then always insert the kind in it's place.
-        if '%s' in template_name:
-            filename = template_name % kind
-        else:
-            # Otherwise, if there are multiple kinds, use the current
-            # kind as a prefix to differentiate (i.e. arrays-template.pot).
-            if multiple_kinds:
-                filename = "%s-%s" % (kind, template_name)
-            else:
-                # Otherwise, we're fine with just the template name alone.
-                filename = template_name
+        filename = self.env.config.template_name % {
+            'group': kind,
+            'domain': self.env.config.domain or 'android',
+        }
         return self.env.path(self.env.gettext_dir, filename)
 
 
@@ -303,6 +292,12 @@ class Environment(object):
             else:
                 layout = '%(locale)s/LC_MESSAGES/%(domain)s.po'
         else:
+            # TODO: These tests essentially disallow any advanced
+            # formatting syntax. While that is unlikely to be used
+            # or needed, a better way to test for the existance of
+            # a placeholder would probably be to insert a unique string
+            # and see if it comes out at the end; or, come up with
+            # a proper regex to parse.
             if not '%(locale)s' in layout:
                 raise EnvironmentError('locale missing')
             if self.config.domain and not '%(domain)s' in layout:
@@ -310,6 +305,36 @@ class Environment(object):
             if multiple_pos and not '%(group)s' in layout:
                 raise EnvironmentError('group missing')
         self.config.layout = layout
+
+        # The --template option needs similar processing:
+        template = self.config.template_name
+        if not template:
+            if self.config.domain and multiple_pos:
+                template = '%(domain)s-%(group)s.pot'
+            elif self.config.domain:
+                template = '%(domain)s.pot'
+            elif multiple_pos:
+                template = '%(group)s.pot'
+            else:
+                template = 'template.pot'
+        elif '%s' in template and not '%(group)s' in template:
+            # In an earlier version the --template option only
+            # supported a %s placeholder for the XML kind. Make
+            # sure we still support this.
+            # TODO: Would be nice we if could raise a deprecation
+            # warning here somehow. That means adding a callback
+            # to this function. Or, probably we should just make the
+            # environment aware of the writer object. This would
+            # simplify other things as well.
+            template = template.replace('%s', '%(group)s')
+        else:
+            # Note that we do not validate %(domain)s here; we expressively
+            # allow the user to define a template without a domain.
+            # TODO: See the same case above when handling --layout
+            if multiple_pos and not '%(group)s' in template:
+                raise EnvironmentError('group missing')
+        self.config.template_name = template
+
 
     LANG_DIR = re.compile(r'^values-(\w\w)(?:-r(\w\w))?$')
     def get_android_languages(self):

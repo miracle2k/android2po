@@ -24,17 +24,71 @@ class TestNoTemplate(ProgramTest):
 
 class TestTemplateName(ProgramTest):
 
-    def test(self):
-        """The name of the template file can be configured.
+    def test_default(self):
+        """The default template name without any options.
+        """
+        p = self.setup_project()
+        p.program('export')
+        p.get_po('template.pot')
+
+    def test_default_with_domain(self):
+        """The default template name if a --domain is configured.
+        """
+        p = self.setup_project()
+        p.program('export', {'--domain': 'foo'})
+        p.get_po('foo.pot')
+
+    def test_default_with_group(self):
+        """The default template name if multiple xml kinds are used.
+        """
+        p = self.setup_project()
+        p.write_xml(kind='strings')
+        p.write_xml(kind='arrays')
+        p.program('export')
+        p.get_po('strings.pot')
+        p.get_po('arrays.pot')
+
+    def test_default_with_groups_and_domain(self):
+        """The default template name if both multiple xml kinds and
+        the --domain option are used.
+        """
+        p = self.setup_project()
+        p.write_xml(kind='strings')
+        p.write_xml(kind='arrays')
+        p.program('export', {'--domain': 'foo'})
+        p.get_po('foo-strings.pot')
+        p.get_po('foo-arrays.pot')
+
+    def test_custom(self):
+        """A custom template name can be given.
         """
         p = self.setup_project()
         p.program('export', {'--template': 'foobar1234.pot'})
         p.get_po('foobar1234.pot')
 
-    def test_with_var(self):
-        """The name of the template file can contain a %s placeholder.
-        If it does, it will be replaced by the name of the corresponding
-        xml file, even if only a single kind of xml file is used.
+    def test_custom_requires_groups(self):
+        """If multiple XML kinds are used, then a custom template name,
+        if configured, MUST contain a placeholder for the group.
+        """
+        p = self.setup_project()
+        p.write_xml(kind='strings')
+        p.write_xml(kind='arrays')
+        assert_raises(NonZeroReturned,
+                      p.program, 'export', {'--template': 'mylocation.po'})
+        p.program('export', {'--template': '%(group)s.pot'})
+
+    def test_custom_does_NOT_require_domain(self):
+        """However, even if a --domain is configured, the template name
+        is not required to contain a placeholder for the domain. This
+        behavior differs from --layout, where the placeholder then would
+        indeed be required.
+        """
+        p = self.setup_project()
+        p.program('export', {'--domain': 'foo', '--template': 'foo.pot'})
+
+    def test_old_var_compatibility(self):
+        """Used to be that we only supported %s for the group. This is
+        still supported.
         """
         p = self.setup_project()
         p.program('export', {'--template': 'foobar-%s-1234.pot'})
@@ -270,6 +324,11 @@ class TestLayoutAndDomain(ProgramTest):
     def test_custom_requires_domain_var(self):
         """A custom --layout requires a "domain" placeholder if a custom
         domain is given.
+
+        The idea here is that there is zero purpose in specifying --domain,
+        if you then do not include it in your filenames. It's essentially
+        the only purpose of the option in the first place; certainly right
+        now. It may change at a later point.
         """
         p = self.setup_project(xml_langs=['de'])
         assert_raises(NonZeroReturned,
