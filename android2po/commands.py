@@ -103,6 +103,27 @@ def get_catalog_counts(catalog):
             len([m for m in catalog if m.string and m.id and m.fuzzy]))
 
 
+def list_languages(source, env, writer):
+    """Return a list of languages (by simply calling the proper
+    environment method.
+
+    However, commands should use this helper rather than working
+    with the environment directly, as this outputs helpful
+    diagnostic messages along the way.
+    """
+    assert source in ('gettext', 'android')
+    languages = getattr(env,
+        'get_gettext_languages' if source=='gettext' else 'get_android_languages')()
+    lstr = ", ".join(map(unicode, languages))
+    writer.action('info',
+                  "Found %d language(s): %s" % (len(languages), lstr))
+    writer.message('List of languages was based on %s' % (
+        'the existing gettext catalogs' if source=='gettext'
+        else 'the existing Android resource directories'
+    ))
+    return languages
+
+
 def ensure_directories(cmd, path):
     """Ensure that the given directory exists.
     """
@@ -371,10 +392,10 @@ class InitCommand(Command):
             for code in env.options.language:
                 languages.append(Language(code, env))
         else:
-            languages = env.get_android_languages()
+            languages = list_languages('android', env, self.w)
 
         # First, make sure the templates exist. This makes the "init"
-        # command everything needed to boostrap.
+        # command everything needed to bootstrap.
         # TODO: Test that this happens.
         something_done = self.generate_templates(update=False)
 
@@ -430,7 +451,7 @@ class ExportCommand(InitCommand):
 
         initial_warning = False
 
-        for language in env.get_gettext_languages():
+        for language in list_languages('gettext', env, w):
             for kind in self.env.xmlfiles:
                 target_po = language.po(kind)
                 if not target_po.exists():
@@ -539,5 +560,5 @@ class ImportCommand(Command):
                        action=action)
 
     def execute(self):
-        for language in self.env.get_gettext_languages():
+        for language in list_languages('gettext', self.env, self.w):
             self.process(language)
