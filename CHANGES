@@ -1,3 +1,10 @@
+1.x.x
+    - Existing languages are now determined based on gettext catalogs,
+      this makes it possible to not put the values-xx/ directories under
+      source control.
+    - The --template option may now contain placeholders similar to those
+      --layout supports.
+
 1.1.0 (2010-04-07)
     - Fixed edge cases in which non-significant newlines/tabs could
       end up in the .po file.
