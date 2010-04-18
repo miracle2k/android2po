@@ -189,7 +189,7 @@ def get_element_text(tag):
             if elem.text is not None:
                 t = elem.text
                 # Leading/Trailing whitespace is removed completely
-                # ONLY if there are now nested tags. Handle this before
+                # ONLY if there are no nested tags. Handle this before
                 # calling ``convert_text``, so that whitespace
                 # protecting quotes can still be considered.
                 if elem == tag and len(tag) == 0:
