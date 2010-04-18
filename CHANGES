@@ -1,4 +1,4 @@
-1.x.x
+1.1.0
     - Fixed edge cases in which non-significant newlines/tabs could
       end up in the .po file.
     - Added support for string-array.
