@@ -134,6 +134,13 @@ class TestFromXML():
         # string using the log; setting it to the caption of a textview,
         # for example, keeps the multiple linebreaks.
 
+        # @ is used to reference other resources, but if it's escaped,
+        # we want a raw @ instead. Note that for this to work well,
+        # we need to make sure we don't include unescaped @-resource
+        # reference at all in the gettext catalogs.
+        self.assert_convert(r'\@string/app_name', '@string/app_name')
+        self.assert_convert(r'foo \@test bar', 'foo @test bar')
+
         # A double slash can be used to protect escapes.
         self.assert_convert(r'new\\nline',  'new\\nline')
 
@@ -300,6 +307,10 @@ class TestToXML():
 
         # Also, backslash are escaped into double backslashes.
         self.assert_convert('\\', r'\\')
+
+        # @ is used to reference other resources and needs to be escaped.
+        self.assert_convert('@string/app_name', r'\@string/app_name')
+        self.assert_convert('foo @test bar', r'foo \@test bar')
 
         # Test a practical case of a double backslash used to protect
         # what would otherwise be considered a escape sequence.

@@ -4,6 +4,9 @@
       source control.
     - The --template option may now contain placeholders similar to those
       --layout supports.
+    - Properly import messages that start with an '@' character. As a
+      result, string resources that use the @-reference syntax are no
+      longer exported at all.
 
 1.1.0 (2010-04-07)
     - Fixed edge cases in which non-significant newlines/tabs could

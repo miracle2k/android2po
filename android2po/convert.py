@@ -28,6 +28,11 @@ class InvalidResourceError(Exception):
     pass
 
 
+class UnsupportedResourceError(Exception):
+    def __init__(self, resource):
+        self.resource = resource
+
+
 WHITESPACE = ' \n\t'     # Whitespace that we collapse
 EOF = None
 
@@ -148,7 +153,7 @@ def get_element_text(tag):
                     elif c == 't':
                         text[i - 1:i + 1] = '\t'  # an actual tab
                         i -= 1
-                    elif c in '"\'':
+                    elif c in '"\'@':
                         text[i - 1:i] = ''    # remove the backslash
                         i -= 1
                     else:
@@ -161,7 +166,6 @@ def get_element_text(tag):
                         # forth without loss.
                         pass
                     escaped = False
-
 
             i += 1
 
@@ -180,6 +184,7 @@ def get_element_text(tag):
     value = u""
     for ev, elem  in etree.iterwalk(tag, events=('start', 'end',)):
         is_root = elem == tag
+        has_children = len(tag) > 0
         if ev == 'start':
             if not is_root:
                 # TODO: We are currently not dealing correctly with
@@ -192,8 +197,23 @@ def get_element_text(tag):
                 # ONLY if there are no nested tags. Handle this before
                 # calling ``convert_text``, so that whitespace
                 # protecting quotes can still be considered.
-                if elem == tag and len(tag) == 0:
+                if is_root and not has_children and len(tag) == 0:
                     t = t.strip(WHITESPACE)
+
+                # Resources that start with @ reference other resources.
+                # While we aren't particularily interested in converting
+                # those, we also can't do it right now because we wouldn't
+                # be able to differ between literal @ characters and the
+                # reference syntax during import.
+                #
+                # While it may seem a bit early to deal with this here, we
+                # have no choice, because the caller needs *some* way of
+                # differentating between an escaped literal '@' and this
+                # kind of resource-reference. Since we unescape literals,
+                # we need to do something with the reference-@.
+                if is_root and not has_children and t and t[0] == '@':
+                    raise UnsupportedResourceError(t)
+
                 value += convert_text(t)
         elif ev == 'end':
             # The closing root tag has no info for us at all.
@@ -228,11 +248,36 @@ def read_xml(file, warnfunc=dummy_warn):
             continue
 
         if tag.tag == 'string':
-            result[name] = get_element_text(tag)
+            try:
+                result[name] = get_element_text(tag)
+            except UnsupportedResourceError, e:
+                warnfunc(('"%s" has been skipped because it is a '+
+                          'resource reference ("%s")') % (name, e.resource), 'info')
         elif tag.tag == 'string-array':
             result[name] = list()
             for child in tag.findall('item'):
-                result[name].append(get_element_text(child))
+                try:
+                    result[name].append(get_element_text(child))
+                except UnsupportedResourceError, e:
+                    # XXX: We currently can't handle this, because even if
+                    # we write out a .po file with the proper array
+                    # indices, and items like this one missing, during
+                    # import we still need to write out those items that
+                    # we have now skipped, since the Android format is only
+                    # a simple list of items, i.e. we need to specify the
+                    # fully array, and can't override individual items on
+                    # a per-translation basis.
+                    #
+                    # To fix this, we have two options: Either we support
+                    # annotating gettext messages, in which case we could
+                    # indicate whether or not a message like this was a
+                    # reference and should be escaped or not. Or, better,
+                    # the import process would need to use information from
+                    # the default strings.xml file to fill the vacancies.
+                    warnfunc(('Warning: The array "%s" contains an item that '+
+                              'is a resource reference: "%s"; those are '+
+                              'currently not properly supported for arrays - '+
+                              'the array will be incomplete') % (name, e.resource), 'warning')
         # TODO:
         #elif tag.tag == 'plurals':
         #    result[name] = dict()
@@ -385,6 +430,11 @@ def write_to_dom(elem_name, value, message, warnfunc=dummy_warn):
         text = text.replace('\t', '\\t')
         text = text.replace('\'', '\\\'')
         text = text.replace('"', '\\"')
+        # Strictly speaking, @ only needs to be escaped when
+        # it's the first character. But, since our target XML
+        # files are basically generate-only and unlikely to be
+        # edited by a user, don't bother with pretty.
+        text = text.replace('@', '\\@')
         return text
 
     # POSTPROCESS

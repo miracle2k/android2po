@@ -12,8 +12,6 @@ Options we would like to support:
 	  seems to be an converter Google uses internally, which quotes all
 	  strings, regardless if they contain any content that would benefit
 	  from quoting.
-	- option to automatically ignore messages that only contain a variable
-	  reference, like  <string name="app_name">@string/app_name</string>
 
 There are some areas of code that we currently don't test; mostly the
 basic environment handling (detecting config file etc). Also, coverage
