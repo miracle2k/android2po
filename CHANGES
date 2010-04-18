@@ -1,4 +1,4 @@
-1.1.0
+1.1.0 (2010-04-07)
     - Fixed edge cases in which non-significant newlines/tabs could
       end up in the .po file.
     - Added support for string-array.
@@ -9,7 +9,7 @@
     - Nicer output.
     - Decent test coverage, we're getting there.
 
-1.0.1
+1.0.1 (2009-12-04)
     - The ``a2po`` script installed when only distutils is available
       was broken.
     - Minor doc fixes.
