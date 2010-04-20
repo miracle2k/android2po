@@ -236,3 +236,8 @@ http://www.artfulbits.com/Android/aiLocalizer.aspx
 http://groups.google.com/group/android-platform/browse_thread/thread/a2626195205e8543
     Notes that Google internally manages Android translations in their
     own system.
+
+https://launchpad.net/intltool
+    Converts to and from .po und "can be extended to support other types
+    of XML" - sounds like something we could've used? It's Perl though,
+    ugh.
