@@ -40,7 +40,7 @@ class Config(object):
         },
         {'name': 'template',
          'help': 'filename to use for the .pot file(s); may contain the '+
-                 '%(domain)s and %(group)s variables',
+                 '%%(domain)s and %%(group)s variables',
          'dest': 'template_name',
          'default': '',
          'kwargs': {'metavar': 'NAME',}
