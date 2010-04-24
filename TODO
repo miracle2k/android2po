@@ -1,17 +1,29 @@
 The --verbose option currently doesn't do a lot. We could output more
 diagnostics, for example if and how many strings were ignored etc.
 
+The --ignore option could be supported through additional venues: A .po
+file that includes the strings to be ignored. Also, strings that 
+should be ignored could be marked directly in the xml via a special
+attribute in a custom android2po namespace.
+
+Our array support currently has trouble with a particular use case: If
+the array is not supposed to be fixed-length, but rather serves as a
+collection of strings, the number of which may differ from language 
+to language. Granted, there isn't really a good way to map this to
+.po anyhow, except maybe a single field that needs to use some kind of
+separator. Not sure if this is something worth supporting.
+
 Add some kind of variation on the init command that would automatically
 install a config file if it doesn't exist. Maybe we could to this if init
 is called without any .po files existing yet, and without a specific
 language being requested.
 
 Options we would like to support:
-	- ability to pull .po header fields into messages
-   - option to emulate "always quote" mode, emulating the behavior of what
-	  seems to be an converter Google uses internally, which quotes all
-	  strings, regardless if they contain any content that would benefit
-	  from quoting.
+    - ability to pull .po header fields into messages
+    - option to emulate "always quote" mode, emulating the behavior of what
+      seems to be an converter Google uses internally, which quotes all
+      strings, regardless if they contain any content that would benefit
+      from quoting.
 
 There are some areas of code that we currently don't test; mostly the
 basic environment handling (detecting config file etc). Also, coverage
