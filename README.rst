@@ -237,6 +237,10 @@ http://groups.google.com/group/android-platform/browse_thread/thread/a2626195205
     Notes that Google internally manages Android translations in their
     own system.
 
+    There is a converter from and to XLIFF in ``frameworks/base/tools/localize``,
+    which might be what they are using. It looks pretty decent too. Why
+    isn't this promoted more?
+
 https://launchpad.net/intltool
     Converts to and from .po und "can be extended to support other types
     of XML" - sounds like something we could've used? It's Perl though,
