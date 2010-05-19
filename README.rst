@@ -121,7 +121,7 @@ files back in, to compare with what you originally had, and make sure
 the script was able to process your files correctly.
 At this point, make sure you have a backup, since your language-specific
 ``strings.xml`` files are going to be replaced (you are using source
-control, right?!):
+control, right?!)::
 
     $ a2po import
     $ git diff --ignore-all-space res/values-XX/strings.xml
@@ -193,7 +193,7 @@ Configuration file
 
 A configuration file can be used to avoid manually specifying all the
 required options. The format of the file is simply a list of command
-line option, each specified on a line of it's own. For example:
+line option, each specified on a line of it's own. For example::
 
     --no-template
     # Paths - don't specify --android, default location is used.
