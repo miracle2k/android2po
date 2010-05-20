@@ -37,6 +37,18 @@ WHITESPACE = ' \n\t'     # Whitespace that we collapse
 EOF = None
 
 
+# Some AOSP projects like to include xliff:* tags to annotate
+# strings with more information for translators. This is actually harder
+# to support than it might look like: We want the translators to see at
+# least a tag called "xliff", not the namespace URIs, but we currently
+# don't have a way to define namespaces in the .po files (comments?),
+# so in order to properly generate an XML on import, we can only deal
+# with a fixed list of namespace that we now about.
+KNOWN_NAMESPACES = {
+    'urn:oasis:names:tc:xliff:document:1.2': 'xliff',
+}
+
+
 # The methods here sometimes need to notify the caller about warnings
 # processing on; this is why they all take a ``warn_func`` argument.
 # By default, if no warnfunc is passed, this dummy will be used.
@@ -172,8 +184,21 @@ def get_element_text(tag):
         # Join the string together again, but w/o EOF marker
         return "".join(text[:-1])
 
+    def get_tag_name(elem):
+        """For tags without a namespace, returns ("tag", None).
+        For tags with a known-namespace, returns ("prefix:tag", None).
+        For tags with an unknown-namespace, returns ("tag", ("prefix", "ns"))
+        """
+        if elem.prefix:
+            namespace = elem.nsmap[elem.prefix]
+            raw_name = elem.tag[elem.tag.index('}')+1:]
+            if namespace in KNOWN_NAMESPACES:
+                return "%s:%s" % (KNOWN_NAMESPACES[namespace], raw_name), None
+            return "%s:%s" % (elem.prefix, raw_name), (elem.prefix, namespace)
+        return elem.tag, None
+
     # We need to recreate the contents of this tag; this is more
-    # complicated as you might expect; firstly, there is nothing
+    # complicated than you might expect; firstly, there is nothing
     # built into lxml (or any other parse I have seen for that
     # matter). While it is possible to use the ``etree.tostring``
     # to render this tag and it's children, this still would give
@@ -187,10 +212,19 @@ def get_element_text(tag):
         has_children = len(tag) > 0
         if ev == 'start':
             if not is_root:
+                # Take care of the tag name, namespace and attributes.
+                # Since we can't store namespace urls in a .po file, dealing
+                # with (unknown) namespaces requires generating a xmlns
+                # attribute.
                 # TODO: We are currently not dealing correctly with
                 # attribute values that need escaping.
-                params = "".join([" %s=\"%s\"" % (k, v) for k, v in elem.attrib.items()])
-                value += u"<%s%s>" % (elem.tag, params)
+                tag_name, to_declare = get_tag_name(elem)
+                params = ["%s=\"%s\"" % (k, v) for k, v in elem.attrib.items()]
+                if to_declare:
+                    name, url = to_declare
+                    params.append('xmlns:%s="%s"' % (name, url))
+                params_str = " %s" % " ".join(params) if params else ""
+                value += u"<%s%s>" % (tag_name, params_str)
             if elem.text is not None:
                 t = elem.text
                 # Leading/Trailing whitespace is removed completely
@@ -218,7 +252,8 @@ def get_element_text(tag):
         elif ev == 'end':
             # The closing root tag has no info for us at all.
             if not is_root:
-                value += u"</%s>" % elem.tag
+                tag_name, _ = get_tag_name(elem)
+                value += u"</%s>" % tag_name
                 if elem.tail is not None:
                     value += convert_text(elem.tail)
     return value
@@ -351,7 +386,7 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
         return catalog
 
 
-def write_to_dom(elem_name, value, message, warnfunc=dummy_warn):
+def write_to_dom(elem_name, value, message, namespaces=None, warnfunc=dummy_warn):
     """Create a DOM object with the tag name ``elem_name``, containing
     the string ``value`` formatted according to Android XML rules.
 
@@ -363,6 +398,11 @@ def write_to_dom(elem_name, value, message, warnfunc=dummy_warn):
     of a tag, but due to us having to do certain formatting based on
     child DOM elements that ``value`` may include, the two fit
     naturally together (see the POSTPROCESS section of this function).
+
+    If one of our supported namespace prefixes is used within nested tags
+    inside ``value``, the appropriate data is added to the
+    ``namespaces`` dict, if given, so the caller may generate the
+    proper declarations.
     """
 
     loose_parser = etree.XMLParser(recover=True)
@@ -386,13 +426,33 @@ def write_to_dom(elem_name, value, message, warnfunc=dummy_warn):
     value = value.replace('&amp;gt;', '&gt;')
 
     # PARSE
-    value_to_parse = "<%s>%s</%s>" % (elem_name, value, elem_name)
+    #
+    # Namespace handling complicates things a bit. We want the value
+    # we inject to support nested XML with certain supported namespace
+    # prefixes, but lxml doesn't seem to allow us to predefine those
+    # (https://answers.launchpad.net/lxml/+question/111660).
+    # So we use a wrapping element with xmlns attributes that we ignore
+    # after parsing.
+    namespace_text = " ".join(['xmlns:%s="%s"' % (prefix, ns) for ns, prefix in KNOWN_NAMESPACES.items()])
+    value_to_parse = "<root %s><%s>%s</%s></root>" % (namespace_text, elem_name, value, elem_name)
     try:
         elem = etree.fromstring(value_to_parse)
     except etree.XMLSyntaxError, e:
         elem = etree.fromstring(value_to_parse, loose_parser)
         warnfunc(('Message %s contains invalid XHTML (%s); Falling back to '
                   'loose parser.') % (message.context, e), 'warning')
+
+    # Within the generated DOM, search for use of one of our supported
+    # namespace prefixes, so we can keep track of which namespaces have
+    # been used.
+    if namespaces is not None:
+        for c in elem.iterdescendants():
+            if c.prefix:
+                nsuri = c.nsmap[c.prefix]
+                if nsuri in KNOWN_NAMESPACES:
+                    namespaces[KNOWN_NAMESPACES[nsuri]] = nsuri
+    # Then, proceed with the actual element that we wanted to create.
+    elem = elem[0]
 
     def quote(text):
         """Return ``text`` surrounded by quotes if necessary.
@@ -513,19 +573,26 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
             xml_tree[message.context] = value
 
     # Convert the xml tree we've built into an actual Android XML DOM.
-    root_el = etree.Element('resources')
+    root_tags = []
+    namespaces_used = {}
     for name, value in xml_tree.iteritems():
         if isinstance(value, dict):
             # string-array - first, sort by index
             array_el = etree.Element('string-array')
             array_el.attrib['name'] = name
             for k in sorted(value):
-                item_el = write_to_dom('item', value[k], message, warnfunc)
+                item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
                 array_el.append(item_el)
-            root_el.append(array_el)
+            root_tags.append(array_el)
         else:
             # standard string
-            string_el = write_to_dom('string', value, message, warnfunc)
+            string_el = write_to_dom('string', value, message, namespaces_used, warnfunc)
             string_el.attrib['name'] = name
-            root_el.append(string_el)
+            root_tags.append(string_el)
+
+    # Generate the root element, define the namespaces that have been
+    # used across all of our child elements.
+    root_el = etree.Element('resources', nsmap=namespaces_used)
+    for e in root_tags:
+        root_el.append(e)
     return root_el
