@@ -259,7 +259,7 @@ class Environment(object):
         # files, i.e. for example the values/strings.xml file.
         self.xmlfiles = find_android_kinds(self.resource_dir)
         if not self.xmlfiles:
-            raise EnvironmentError('default language was not found.')
+            raise EnvironmentError('no language-neutral string resources found in "values/".')
 
         # If regular expressions are used as ignore filters, precompile
         # those to help speed things along. For simplicity, we also
