@@ -61,7 +61,8 @@ class TempProject(object):
 
         os.mkdir(self.locale_dir)
         os.mkdir(self.resource_dir)
-        self.write_xml(default_xml)
+        if default_xml not in (False, None):
+            self.write_xml(default_xml)
         # Language-XML files that should be created by default
         for code in xml_langs:
             self.write_xml(lang=code)

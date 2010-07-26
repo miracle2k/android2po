@@ -7,6 +7,7 @@ from argparse import Namespace
 from os import path
 from .config import Config
 from .utils import Path, format_to_re
+from .convert import read_xml, InvalidResourceError
 
 
 __all__ = ('EnvironmentError', 'IncompleteEnvironment',
@@ -122,10 +123,45 @@ def find_android_kinds(resource_dir):
     default values/ resource directory.
     """
     kinds = []
-    for filename in ('strings.xml', 'arrays.xml'):
-        file = path.join(resource_dir, 'values', filename)
-        if path.isfile(file):
-            kinds.append(path.splitext(filename)[0])
+    search_dir = path.join(resource_dir, 'values')
+    for name in os.listdir(search_dir):
+        filename = path.join(search_dir, name)
+        if path.isfile(filename) and name.endswith('.xml'):
+            # We want to support arbitrary xml resource file names, but
+            # we also need to make sure we only return those which actually
+            # contain string resources. More specifically, a file named
+            # my-colors.xml, containing only color resources, should not
+            # result in a my-colors.po catalog to be created.
+            #
+            # We thus attempt to read each file here, see if there are any
+            # strings in it. If we fail to parse a file, we return it and
+            # trust that whatever command the user selected will later also
+            # stumble and show a proper error.
+            #
+            # TODO:
+            # I'm not entirely happy about this. One obvious problem is that
+            # we are likely to parse these xml files twice, which seems like
+            # a code smell. One potential solution: Stores the parsed XML
+            # result directly in memory, with the environment, rather than
+            # parsing it a second time later.
+            #
+            # We could also opt to fail outright if we encounter an invalid
+            # XML file here, since the error doesn't belong to any "action".
+            kind = path.splitext(name)[0]
+            if kind in ('strings', 'arrays'):
+                # These kinds are special, they are always supposed to
+                # contain something translatable, so always include them.
+                kinds.append(kind)
+            else:
+                try:
+                    strings = read_xml(filename)
+                except InvalidResourceError, e:
+                    raise EnvironmentError('Failed to parse "%s": %s' % (filename, e))
+                else:
+                    # If there are any strings in the file, detect as
+                    # a kind of xml file.
+                    if strings:
+                        kinds.append(kind)
     return kinds
 
 
