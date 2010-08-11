@@ -335,11 +335,14 @@ class Environment(object):
             # and see if it comes out at the end; or, come up with
             # a proper regex to parse.
             if not '%(locale)s' in layout:
-                raise EnvironmentError('locale missing')
+                raise EnvironmentError('--layout lacks $(locale)s variable')
             if self.config.domain and not '%(domain)s' in layout:
-                raise EnvironmentError('domain missing')
+                raise EnvironmentError('--layout needs %(domain)s variable, ',
+                                       'since you have set a --domain')
             if multiple_pos and not '%(group)s' in layout:
-                raise EnvironmentError('group missing')
+                raise EnvironmentError('--layout needs %%(group)s variable, '
+                                       'since you have multiple groups: %s' % (
+                                           ", ".join(self.xmlfiles)))
         self.config.layout = layout
 
         # The --template option needs similar processing:
@@ -368,7 +371,9 @@ class Environment(object):
             # allow the user to define a template without a domain.
             # TODO: See the same case above when handling --layout
             if multiple_pos and not '%(group)s' in template:
-                raise EnvironmentError('group missing')
+                raise EnvironmentError('--template needs %%(group)s variable, '
+                                       'since you have multiple groups: %s' % (
+                                           ", ".join(self.xmlfiles)))
         self.config.template_name = template
 
 
