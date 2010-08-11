@@ -137,10 +137,6 @@ class TempProject(object):
                         # the dict: {'arg': [['val1', 'val2']]}
                         args.append('%s' % k)
                         args.extend(w)
-                        # In case "k" refers to an argument defined as
-                        # nargs='+', make sure it won't capture more than
-                        # the actual values in w.
-                        args.extend('-')
                     else:
                         # Otherwise, we set a single value, and we use "=",
                         # so that arguments that are defined as nargs='+'

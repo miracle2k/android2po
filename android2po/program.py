@@ -48,15 +48,11 @@ def parse_args(argv):
                        help='be extra quiet')
     base_parser.add_argument('--config', '-c', metavar='FILE',
                              help='config file to use')
-    # For allowing the user to break out of a nargs='*' argument.
-    base_parser.add_argument('-', dest='__dummy', action="store_true",
-                             help=argparse.SUPPRESS)
     # Add the arguments that set/override the configuration.
     group = base_parser.add_argument_group('configuration',
         'Those can also be specified in a configuration file. If given '
         'here, values from the configuration file will be overwritten.')
     Config.setup_arguments(group)
-
     # Add our commands with the base arguments + their own.
     subparsers = parser.add_subparsers(dest="command", title='commands',
                                        description='valid commands',
