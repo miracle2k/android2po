@@ -157,6 +157,7 @@ class TempProject(object):
         sys.stderr = sys.stdout
         try:
             try:
+                print "Running: %s" % " ".join(args)
                 ret = a2po.main(args)
             except SystemExit, e:
                 # argparse likes to raise this if arguments are invalid.
