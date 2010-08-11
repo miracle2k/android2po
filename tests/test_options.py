@@ -346,3 +346,45 @@ class TestLayoutAndDomain(ProgramTest):
         assert_raises(NonZeroReturned,
                       p.program, 'init', {'--layout': '%(locale)s.po'})
         p.program('init', {'--layout': '%(locale)s-%(group)s.po'})
+
+
+class TestGroups(ProgramTest):
+    """Test the --groups option.
+    """
+
+    def test_restrict_to_subset(self):
+        """Use --groups to ignore a file which otherwise would be
+        processed.
+        """
+        p = self.setup_project(default_xml=False)
+        p.write_xml(kind='strings')
+        p.write_xml(kind='arrays')
+        p.program('init', {'--groups': 'strings'})
+        # NOTE: Because we have only one group after the restriction,
+        # the default name is "template.pot", not "strings.pot". This
+        # behavior could well be different: we could opt to always
+        # use the group name in the default template name as well as
+        # the --groups option gets involved.
+        p.get_po('template.pot')
+        assert_raises(IOError, p.get_po, 'arrays.pot')
+
+    def test_request_invalid_group(self):
+        """Use --groups to refer to a group where the corresponding XML
+        file doesn't actually exist.
+        """
+        p = self.setup_project(default_xml=False)
+        p.write_xml(kind='strings')
+        p.write_xml(kind='arrays')
+        assert_raises(NonZeroReturned, p.program, 'init', {'--groups': 'foobar'})
+        # TODO: Test the error message
+
+    def test_request_ignored_group(self):
+        """Use --groups to include a file which otherwise would be ignored.
+        """
+        p = self.setup_project(default_xml=False)
+        p.write_xml(kind='strings')
+        p.write_xml(kind='no-string-file',
+                    data="""<resources><color name="white">#ffffffff</color></resources>""")
+        p.program('init', {'--groups': [['strings', 'no-string-file']]})
+        p.get_po('no-string-file.pot')
+        p.get_po('strings.pot')

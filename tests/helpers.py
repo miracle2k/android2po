@@ -131,7 +131,17 @@ class TempProject(object):
                     # times with different values.
                     v = [v]
                 for w in v:
-                    args.append("%s=%s" % (k, w))
+                    if isinstance(w, (list, tuple)):
+                        # This is starting to get messy, but this allows the
+                        # caller to generate "--arg val1 val2" by passing as
+                        # the dict: {'arg': [['val1', 'val2']]}
+                        args.append('%s' % k)
+                        args.extend(w)
+                    else:
+                        # Otherwise, we set a single value, and we use "=",
+                        # so that arguments that are defined as nargs='+'
+                        # will not capture more than the value "w".
+                        args.append("%s=%s" % (k, w))
 
         old_cwd = os.getcwd()
         os.chdir(self.dir)

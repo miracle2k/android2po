@@ -32,6 +32,14 @@ class Config(object):
          'kwargs': {'metavar': 'DIR',}
          # No default, and will not actually be stored on the config object.
         },
+        {'name': 'groups',
+         'help': 'process the given default XML files (for example '+
+                 '"strings arrays"); by default all files which contain '+
+                 'string resources will be used',
+         'dest': 'groups',
+         'default': [],
+         'kwargs': {'nargs': '+', 'metavar': 'GROUP'}
+        },
         {'name': 'no-template',
          'help': 'do not generate a .pot template file on export',
          'dest': 'no_template',

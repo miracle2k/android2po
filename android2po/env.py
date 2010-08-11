@@ -116,11 +116,15 @@ def find_project_dir_and_config():
     return None, None
 
 
-def find_android_kinds(resource_dir):
+def find_android_kinds(resource_dir, get_all=False):
     """Return a list of Android XML resource types that are in use.
 
-    For this, we simply have a look which xml files exist in the
-    default values/ resource directory.
+    For this, we simply have a look which xml files exists in the
+    default values/ resource directory, and return those which
+    include string resources.
+
+    If ``get_all`` is given, the test for string resources will be
+    skipped.
     """
     kinds = []
     search_dir = path.join(resource_dir, 'values')
@@ -148,7 +152,7 @@ def find_android_kinds(resource_dir):
             # We could also opt to fail outright if we encounter an invalid
             # XML file here, since the error doesn't belong to any "action".
             kind = path.splitext(name)[0]
-            if kind in ('strings', 'arrays'):
+            if kind in ('strings', 'arrays') or get_all:
                 # These kinds are special, they are always supposed to
                 # contain something translatable, so always include them.
                 kinds.append(kind)
@@ -293,7 +297,19 @@ class Environment(object):
 
         # Find the Android XML resources that are our original source
         # files, i.e. for example the values/strings.xml file.
-        self.xmlfiles = find_android_kinds(self.resource_dir)
+        groups_found = find_android_kinds(self.resource_dir,
+                                          get_all=bool(self.config.groups))
+        if self.config.groups:
+            self.xmlfiles = self.config.groups
+            _missing = set(self.config.groups) - set(groups_found)
+            if _missing:
+                raise EnvironmentError('Unable to find the default XML '
+                    'files for the following groups: %s' % (
+                        ", ".join(["%s (%s)" % (
+                            g, path.join(self.resource_dir, 'values', "%s.xml" % g)) for g in _missing])
+                    ))
+        else:
+            self.xmlfiles = groups_found
         if not self.xmlfiles:
             raise EnvironmentError('no language-neutral string resources found in "values/".')
 
