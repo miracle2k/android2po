@@ -67,7 +67,7 @@ class Config(object):
          'kwargs': {'metavar': 'FLOAT', 'type': percentage}
         },
         {'name': 'domain',
-         'help': 'gettext do domain to use, affects the .po filenames',
+         'help': 'gettext po domain to use, affects the .po filenames',
          'dest': 'domain',
          'default': None,
         },
