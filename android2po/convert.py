@@ -276,6 +276,10 @@ def read_xml(file, warnfunc=dummy_warn):
     for tag in doc.xpath('/resources/*[self::string or self::string-array or self::plurals]'):
         if not 'name' in tag.attrib:
             continue
+        if 'translatable' in tag.attrib:
+            translatable = tag.attrib['translatable']
+            if translatable == 'false':
+                continue
         name = tag.attrib['name']
         if name in result:
             warnfunc('Duplicate resource id found: %s, ignoring.' % name,
