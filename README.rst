@@ -69,17 +69,17 @@ The basic idea is that:
   the reference version of the translations.
 
 * The ``values-XX/strings.xml`` files are fully generated based on
-  your ``.po`` files, should not be modified manually.
+  your ``.po`` files, and should not be modified manually.
 
 Aside from your authority strings.xml file, you usually will want to keep
-your file .po files in source control; The generated language-specific
+your .po files in source control; The generated language-specific
 ``strings.xml`` files then contain no additional information, and do not
 need to be source controlled, though you are free to if you like.
 
 The environment
 ~~~~~~~~~~~~~~~
 
-Two be able to run, the script necessarily needs to know about two
+To be able to run, the script necessarily needs to know about two
 filesystem locations: The directory where your Android resources are
 located, and the directory where the gettext .po files should be stored:
 
