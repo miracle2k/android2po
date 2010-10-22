@@ -293,15 +293,18 @@ def read_xml(file, warnfunc=dummy_warn):
             comment.append(tag.text)
             continue
         if not 'name' in tag.attrib:
+            comment = []
             continue
         if 'translatable' in tag.attrib:
             translatable = tag.attrib['translatable']
             if translatable == 'false':
+                comment = []
                 continue
         name = tag.attrib['name']
         if name in result:
             warnfunc('Duplicate resource id found: %s, ignoring.' % name,
                      'warning')
+            comment = []
             continue
 
         if tag.tag == 'string':

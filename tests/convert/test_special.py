@@ -134,3 +134,30 @@ class TestComments:
         assert catalog.get('item1', context='array:0').auto_comments == [' Comment 1 ', ' Comment 2 ']
         assert catalog.get('item2', context='array:1').auto_comments == [' Comment 1 ', ' Comment 2 ']
         assert catalog.get('value', context='string').auto_comments == []
+
+    def test_translatable(self):
+        """[bug] Make sure translatable=false and comments play nice together.
+        """
+        catalog = xml2po(StringIO(
+        '''<resources>
+              <!-- Comment 1 -->
+              <!-- Comment 2 -->
+              <string name="string1" translatable="false">value1</string>
+              <string name="string2">value2</string>
+           </resources>'''))
+        # The comments of string1 do not end up with string2.
+        assert catalog.get('value2', context='string2').auto_comments == []
+
+    def test_nameless(self):
+        """This is an edge-case, but we don't (can't) process strings
+        without a name. Comments are not passed along there either.
+        """
+        catalog = xml2po(StringIO(
+        '''<resources>
+              <!-- Comment 1 -->
+              <!-- Comment 2 -->
+              <string>value1</string>
+              <string name="string2">value2</string>
+           </resources>'''))
+        # The comments of string1 do not end up with string2.
+        assert catalog.get('value2', context='string2').auto_comments == []
