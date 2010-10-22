@@ -101,3 +101,36 @@ class TestAndroidResourceReferences:
 
         # A warning was printed
         assert 'resource reference' in logs[0]
+
+
+class TestComments:
+    """Test the processing of comments in xml files.
+    """
+
+    def test_string(self):
+        catalog = xml2po(StringIO(
+        '''<resources>
+              <!-- Comment 1 -->
+              <!-- Comment 2 -->
+              <string name="string1">value1</string>
+              <string name="string2">value2</string>
+           </resources>'''))
+        # TODO: Should those be stripped? Otherwise formatted (linebreaks etc)?
+        assert catalog.get('value1', context='string1').auto_comments == [' Comment 1 ', ' Comment 2 ']
+        assert catalog.get('value2', context='string2').auto_comments == []
+
+    def test_string_array(self):
+        catalog = xml2po(StringIO(
+        '''<resources>
+              <!-- Comment 1 -->
+              <!-- Comment 2 -->
+              <string-array name="array">
+                  <item>item1</item>
+                  <!-- this will be ignored -->
+                  <item>item2</item>
+              </string-array>
+              <string name="string">value</string>
+           </resources>'''))
+        assert catalog.get('item1', context='array:0').auto_comments == [' Comment 1 ', ' Comment 2 ']
+        assert catalog.get('item2', context='array:1').auto_comments == [' Comment 1 ', ' Comment 2 ']
+        assert catalog.get('value', context='string').auto_comments == []
