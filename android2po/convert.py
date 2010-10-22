@@ -54,6 +54,15 @@ KNOWN_NAMESPACES = {
 # By default, if no warnfunc is passed, this dummy will be used.
 dummy_warn = lambda message, severity=None: None
 
+# The translation class that holds information about the translations
+# themselves.
+class Translation():
+    text = ""
+    comments = []
+
+    def __init__(self, text, comments):
+        self.text = text
+        self.comments = comments
 
 def get_element_text(tag):
     """Return the contents of the lxml ``element``, with the Android
@@ -267,15 +276,23 @@ def read_xml(file, warnfunc=dummy_warn):
     a dict (a plurals tag).
     """
     result = OrderedDict()
+    comment = []
 
     try:
         doc = etree.parse(file)
     except etree.XMLSyntaxError, e:
         raise InvalidResourceError(e)
 
-    for tag in doc.xpath('/resources/*[self::string or self::string-array or self::plurals]'):
+    for tag in doc.getroot():
+        if tag.tag == etree.Comment:
+            comment.append(tag.text)
+            continue
         if not 'name' in tag.attrib:
             continue
+        if 'translatable' in tag.attrib:
+            translatable = tag.attrib['translatable']
+            if translatable == 'false':
+                continue
         name = tag.attrib['name']
         if name in result:
             warnfunc('Duplicate resource id found: %s, ignoring.' % name,
@@ -284,15 +301,18 @@ def read_xml(file, warnfunc=dummy_warn):
 
         if tag.tag == 'string':
             try:
-                result[name] = get_element_text(tag)
+                translation = Translation(get_element_text(tag), comment)
+                result[name] = translation
             except UnsupportedResourceError, e:
                 warnfunc(('"%s" has been skipped because it is a '+
                           'resource reference ("%s")') % (name, e.resource), 'info')
+            comment = []
         elif tag.tag == 'string-array':
             result[name] = list()
             for child in tag.findall('item'):
                 try:
-                    result[name].append(get_element_text(child))
+                    translation = Translation(get_element_text(tag), comment)
+                    result[name].append(translation)
                 except UnsupportedResourceError, e:
                     # XXX: We currently can't handle this, because even if
                     # we write out a .po file with the proper array
@@ -313,6 +333,9 @@ def read_xml(file, warnfunc=dummy_warn):
                               'is a resource reference: "%s"; those are '+
                               'currently not properly supported for arrays - '+
                               'the array will be incomplete') % (name, e.resource), 'warning')
+            # Reset the comments after all the children have been processed.
+            comment = []
+
         # TODO:
         #elif tag.tag == 'plurals':
         #    result[name] = dict()
@@ -343,14 +366,18 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
                       else read_xml(translations, warnfunc)
 
     catalog = Catalog()
-    for name, org_value in original_strings.iteritems():
+    for name, org_trans in original_strings.iteritems():
         if filter and filter(name):
             continue
 
+        trans = None
         trans_value = None
         if trans_strings:
-            trans_value = trans_strings.pop(name, trans_value)
+            trans = trans_strings.pop(name, trans)
+            if trans is not None:
+                trans_value = trans.text
 
+        org_value = org_trans.text
         if isinstance(org_value, list):
             # a string-array, write as "name:index"
             if len(org_value) == 0:
@@ -368,11 +395,11 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
             for index, item in enumerate(org_value):
                 item_trans = trans_value[index] if index < len(trans_value) else u''
-                catalog.add(item, item_trans, context="%s:%d" % (name, index))
+                catalog.add(item, item_trans, auto_comments=org_trans.comments, context="%s:%d" % (name, index))
 
         else:
             # a normal string
-            catalog.add(org_value, trans_value or u'', context=name)
+            catalog.add(org_value, trans_value or u'', auto_comments=org_trans.comments, context=name)
         # Would it be too much to ask for add() to return the message?
         # TODO: Bring this back when we can ensure it won't be added
         # during export/update() either.
