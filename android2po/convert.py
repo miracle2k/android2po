@@ -56,6 +56,11 @@ dummy_warn = lambda message, severity=None: None
 
 # The translation class that holds information about the translations
 # themselves.
+# TODO: It might be worth considering whether string-arrays should be
+# implemented as a Translation instance that knows it's an array, rather
+# than a list of Translation objects, as is currently the case; in
+# particular, since comments, as currently implemented, are per
+# string-array anyway, and are just repeated for each item.
 class Translation():
     text = ""
     comments = []
