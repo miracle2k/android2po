@@ -311,7 +311,7 @@ def read_xml(file, warnfunc=dummy_warn):
             result[name] = list()
             for child in tag.findall('item'):
                 try:
-                    translation = Translation(get_element_text(tag), comment)
+                    translation = Translation(get_element_text(child), comment)
                     result[name].append(translation)
                 except UnsupportedResourceError, e:
                     # XXX: We currently can't handle this, because even if
@@ -366,18 +366,14 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
                       else read_xml(translations, warnfunc)
 
     catalog = Catalog()
-    for name, org_trans in original_strings.iteritems():
+    for name, org_value in original_strings.iteritems():
         if filter and filter(name):
             continue
 
-        trans = None
         trans_value = None
         if trans_strings:
-            trans = trans_strings.pop(name, trans)
-            if trans is not None:
-                trans_value = trans.text
+            trans_value = trans_strings.pop(name, trans_value)
 
-        org_value = org_trans.text
         if isinstance(org_value, list):
             # a string-array, write as "name:index"
             if len(org_value) == 0:
@@ -394,12 +390,13 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
                 trans_value = []
 
             for index, item in enumerate(org_value):
-                item_trans = trans_value[index] if index < len(trans_value) else u''
-                catalog.add(item, item_trans, auto_comments=org_trans.comments, context="%s:%d" % (name, index))
+                item_trans = trans_value[index].text if index < len(trans_value) else u''
+                catalog.add(item.text, item_trans, auto_comments=item.comments, context="%s:%d" % (name, index))
 
         else:
             # a normal string
-            catalog.add(org_value, trans_value or u'', auto_comments=org_trans.comments, context=name)
+            catalog.add(org_value.text, trans_value.text if trans_value else u'',
+                        auto_comments=org_value.comments, context=name)
         # Would it be too much to ask for add() to return the message?
         # TODO: Bring this back when we can ensure it won't be added
         # during export/update() either.

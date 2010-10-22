@@ -73,7 +73,7 @@ class TestDealWithBrokenInput(ProgramTest):
         c.add('s', 'I am <b>bold', context='s')
         p.write_po(c, 'de.po')
         assert 'invalid XHTML' in self.runprogram(p, 'import')
-        assert p.get_xml('de')['s'] == 'I am <b>bold</b>'
+        assert p.get_xml('de')['s'].text == 'I am <b>bold</b>'
 
     # XXX test_duplicate_context
 
