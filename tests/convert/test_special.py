@@ -19,6 +19,22 @@ def test_trailing_whitespace():
     assert list(catalog)[1].id == 'bar'
 
 
+def test_translatable():
+    """Strings marked as translatable=False will be skipped.
+    """
+    catalog = xml2po(StringIO(
+        '<resources><string name="foo" translatable="false">bar</string></resources>'))
+    assert len(catalog) == 0
+
+    catalog = xml2po(StringIO(
+        '<resources><string name="foo" translatable="true">bar</string></resources>'))
+    assert list(catalog)[1].id == 'bar'
+
+    catalog = xml2po(StringIO(
+        '<resources><string-array name="foo" translatable="false"><item>bla</item></string-array></resources>'))
+    assert len(catalog) == 0
+
+
 def test_invalid_xhtml():
     """Ensure we can deal with broken XML in messages.
     """
