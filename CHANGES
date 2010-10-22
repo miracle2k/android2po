@@ -7,6 +7,9 @@
     - Properly import messages that start with an '@' character. As a
       result, string resources that use the @-reference syntax are no
       longer exported at all.
+    - Strings marked translatable=false are now ignored (by Kenny Root).
+    - Comments in resource files are now processed and included in the 
+      gettext catalogs (by Kenny Root).
 
 1.1.0 (2010-04-07)
     - Fixed edge cases in which non-significant newlines/tabs could
