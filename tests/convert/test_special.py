@@ -63,6 +63,18 @@ def test_formatted():
         '<resources><string-array name="foo"><item>bar</item></string-array></resources>'))
     assert "c-format" not in list(catalog)[1].flags
 
+    # Babel likes to add python-format
+    catalog = xml2po(StringIO(
+        '<resources><string name="foo">foo %s bar</string></resources>'))
+    assert "c-format" in list(catalog)[1].flags
+    assert not "python-format" in list(catalog)[1].flags
+
+    catalog = xml2po(StringIO(
+        '<resources><string-array name="foo"><item>foo %s bar</item></string-array></resources>'))
+    assert "c-format" in list(catalog)[1].flags
+    assert not "python-format" in list(catalog)[1].flags
+
+
 def test_invalid_xhtml():
     """Ensure we can deal with broken XML in messages.
     """
