@@ -10,6 +10,8 @@
     - Strings marked translatable=false are now ignored (by Kenny Root).
     - Comments in resource files are now processed and included in the 
       gettext catalogs (by Kenny Root).
+    - Format strings are now properly flagged; this can be used for 
+      validation of the translated string (by Kenny Root).
 
 1.1.0 (2010-04-07)
     - Fixed edge cases in which non-significant newlines/tabs could

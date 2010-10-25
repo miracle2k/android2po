@@ -1,6 +1,8 @@
 The --verbose option currently doesn't do a lot. We could output more
 diagnostics, for example if and how many strings were ignored etc.
 
+Validate format strings on import.
+
 An option to not process comments probably makes sense. If people don't
 pay attention to the rules with how comments are applied, the result can
 be confusing comments on the wrong strings.
