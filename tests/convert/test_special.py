@@ -34,6 +34,7 @@ def test_translatable():
         '<resources><string-array name="foo" translatable="false"><item>bla</item></string-array></resources>'))
     assert len(catalog) == 0
 
+
 def test_formatted():
     """Strings with "%1$s" and other Java-style format markers
        will be marked as c-format in the gettext flags.
@@ -128,6 +129,25 @@ class TestAndroidResourceReferences:
 
         # A warning was printed
         assert 'resource reference' in logs[0]
+
+    def test_empty(self):
+        """The same is true for emtpy resources.
+        """
+        catalog, logs = self.make('foo', '     ')
+        assert len(catalog) == 0
+        assert 'empty' in logs[0]
+
+        catalog, logs = self.make_raw('''
+            <resources>
+                <string-array name="test">
+                    <item></item>
+                    <item>          </item>
+                </string-array>
+            </resources>
+        ''')
+        assert len(catalog) == 0
+        assert 'empty' in logs[0]
+        assert 'empty' in logs[1]
 
 
 class TestComments:

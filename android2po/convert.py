@@ -29,8 +29,10 @@ class InvalidResourceError(Exception):
 
 
 class UnsupportedResourceError(Exception):
-    def __init__(self, resource):
-        self.resource = resource
+    """A resource in a XML file can't be processed.
+    """
+    def __init__(self, reason):
+        self.reason = reason
 
 
 WHITESPACE = ' \n\t'     # Whitespace that we collapse
@@ -70,6 +72,7 @@ class Translation():
         self.text = text
         self.comments = comments
         self.formatted = formatted
+
 
 def get_element_text(tag):
     """Return a tuple of the contents of the lxml ``element`` with the
@@ -274,7 +277,8 @@ def get_element_text(tag):
                 # kind of resource-reference. Since we unescape literals,
                 # we need to do something with the reference-@.
                 if is_root and not has_children and t and t[0] == '@':
-                    raise UnsupportedResourceError(t)
+                    raise UnsupportedResourceError(
+                        'resource references (%s) are not supported' % t)
 
                 converted_value, elem_formatted = convert_text(t)
                 if elem_formatted:
@@ -290,6 +294,13 @@ def get_element_text(tag):
                     if elem_formatted:
                         formatted = True
                     value += converted_value
+
+    # Babel can't handle empty msgids, even when using a unique context;
+    # not sure if this is a general gettext limitation, but it's not
+    # unlikely that other tools would have problems, so it's for the better
+    # in any case.
+    if value == u'':
+        raise UnsupportedResourceError('empty resources not supported')
     return value, formatted
 
 
@@ -330,19 +341,18 @@ def read_xml(file, warnfunc=dummy_warn):
         if tag.tag == 'string':
             try:
                 text, formatted = get_element_text(tag)
+            except UnsupportedResourceError, e:
+                warnfunc('"%s" has been skipped, reason: %s' % (
+                    name, e.reason), 'info')
+            else:
                 translation = Translation(text, comment, formatted)
                 result[name] = translation
-            except UnsupportedResourceError, e:
-                warnfunc(('"%s" has been skipped because it is a '+
-                          'resource reference ("%s")') % (name, e.resource), 'info')
             comment = []
         elif tag.tag == 'string-array':
             result[name] = list()
             for child in tag.findall('item'):
                 try:
                     text, formatted = get_element_text(child)
-                    translation = Translation(text, comment, formatted)
-                    result[name].append(translation)
                 except UnsupportedResourceError, e:
                     # XXX: We currently can't handle this, because even if
                     # we write out a .po file with the proper array
@@ -359,10 +369,12 @@ def read_xml(file, warnfunc=dummy_warn):
                     # reference and should be escaped or not. Or, better,
                     # the import process would need to use information from
                     # the default strings.xml file to fill the vacancies.
-                    warnfunc(('Warning: The array "%s" contains an item that '+
-                              'is a resource reference: "%s"; those are '+
-                              'currently not properly supported for arrays - '+
-                              'the array will be incomplete') % (name, e.resource), 'warning')
+                    warnfunc(('Warning: The array "%s" contains that can\'t '+
+                              'be processed (reason: %s) - the array will be '
+                              'incomplete') % (name, e.reason), 'warning')
+                else:
+                    translation = Translation(text, comment, formatted)
+                    result[name].append(translation)
             # Reset the comments after all the children have been processed.
             comment = []
 
