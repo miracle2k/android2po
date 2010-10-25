@@ -3,6 +3,11 @@ diagnostics, for example if and how many strings were ignored etc.
 
 Validate format strings on import.
 
+I'd like to reorganize the test suite: Separate tests into
+  a) how text is parsed (format/escaping-wise)
+  b) which strings are parsed (given the different options)
+  c) how high-level input/output is handled (template name etc).
+
 An option to not process comments probably makes sense. If people don't
 pay attention to the rules with how comments are applied, the result can
 be confusing comments on the wrong strings.
