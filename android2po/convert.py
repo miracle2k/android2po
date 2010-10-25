@@ -229,8 +229,8 @@ def get_element_text(tag):
 
     # We need to recreate the contents of this tag; this is more
     # complicated than you might expect; firstly, there is nothing
-    # built into lxml (or any other parse I have seen for that
-    # matter). While it is possible to use the ``etree.tostring``
+    # built into lxml (or any other parser I have seen for that
+    # matter). While it is possible to use ``etree.tostring``
     # to render this tag and it's children, this still would give
     # us valid XML code; when in fact we want to decode everything
     # XML (including entities), *except* tags. Much more than that
