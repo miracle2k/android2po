@@ -82,7 +82,9 @@ class Config(object):
         {'name': 'layout',
          'help': 'how and where .po files are stored; may be "default", '+
                   '"gnu", or a custom path using the variables %%(locale)s '+
-                  '%%(domain)s and optionally %%(group)s',
+                  '%%(domain)s and optionally %%(group)s. E.g., '+
+                  '"%%(group)s-%%(locale)s.po" will write to "strings-es.po" '+
+                  'for Spanish in strings.xml.',
          'dest': 'layout',
          'default': 'default',
         },

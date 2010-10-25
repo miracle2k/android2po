@@ -34,6 +34,33 @@ def test_translatable():
         '<resources><string-array name="foo" translatable="false"><item>bla</item></string-array></resources>'))
     assert len(catalog) == 0
 
+def test_formatted():
+    """Strings with "%1$s" and other Java-style format markers
+       will be marked as c-format in the gettext flags.
+    """
+    catalog = xml2po(StringIO(
+        '<resources><string name="foo">foo %1$s bar</string></resources>'))
+    assert "c-format" in list(catalog)[1].flags
+
+    catalog = xml2po(StringIO(
+        '<resources><string name="foo">foo %% bar</string></resources>'))
+    assert "c-format" not in list(catalog)[1].flags
+
+    catalog = xml2po(StringIO(
+        '<resources><string name="foo">foo</string></resources>'))
+    assert "c-format" not in list(catalog)[1].flags
+
+    catalog = xml2po(StringIO(
+        '<resources><string-array name="foo"><item>foo %1$s bar</item></string-array></resources>'))
+    assert "c-format" in list(catalog)[1].flags
+
+    catalog = xml2po(StringIO(
+        '<resources><string-array name="foo"><item>foo %% bar</item></string-array></resources>'))
+    assert "c-format" not in list(catalog)[1].flags
+
+    catalog = xml2po(StringIO(
+        '<resources><string-array name="foo"><item>bar</item></string-array></resources>'))
+    assert "c-format" not in list(catalog)[1].flags
 
 def test_invalid_xhtml():
     """Ensure we can deal with broken XML in messages.

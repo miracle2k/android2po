@@ -351,7 +351,7 @@ class Environment(object):
             # and see if it comes out at the end; or, come up with
             # a proper regex to parse.
             if not '%(locale)s' in layout:
-                raise EnvironmentError('--layout lacks $(locale)s variable')
+                raise EnvironmentError('--layout lacks %(locale)s variable')
             if self.config.domain and not '%(domain)s' in layout:
                 raise EnvironmentError('--layout needs %(domain)s variable, ',
                                        'since you have set a --domain')

@@ -64,14 +64,17 @@ dummy_warn = lambda message, severity=None: None
 class Translation():
     text = ""
     comments = []
+    formatted = False
 
-    def __init__(self, text, comments):
+    def __init__(self, text, comments, formatted):
         self.text = text
         self.comments = comments
+        self.formatted = formatted
 
 def get_element_text(tag):
-    """Return the contents of the lxml ``element``, with the Android
-    specific stuff decoded.
+    """Return a tuple of the contents of the lxml ``element`` with the
+    Android specific stuff decoded and whether the text includes
+    formatting codes.
 
     "Contents" isn't just the text; it handles nested HTML tags as well.
     """
@@ -114,6 +117,8 @@ def get_element_text(tag):
         space_count = 0
         active_quote = False
         escaped = False
+        active_percent = False
+        formatted = False
         i = 0
         text = list(text) + [EOF]
         while i < len(text):
@@ -152,6 +157,14 @@ def get_element_text(tag):
                 active_quote = not active_quote
                 del text[i]
                 i -= 1
+
+            # If the strings is run through a formatter, it will have
+            # percentage signs for String.format
+            if c == '%' and not escaped:
+                active_percent = not active_percent
+            elif not escaped and active_percent:
+                formatted = True
+                active_percent = False
 
             # Handle escapes
             if c == '\\':
@@ -196,7 +209,7 @@ def get_element_text(tag):
             i += 1
 
         # Join the string together again, but w/o EOF marker
-        return "".join(text[:-1])
+        return "".join(text[:-1]), formatted
 
     def get_tag_name(elem):
         """For tags without a namespace, returns ("tag", None).
@@ -221,6 +234,7 @@ def get_element_text(tag):
     # though, the processing rules the Android xml format needs
     # require custom processing anyway.
     value = u""
+    formatted = False
     for ev, elem  in etree.iterwalk(tag, events=('start', 'end',)):
         is_root = elem == tag
         has_children = len(tag) > 0
@@ -262,15 +276,21 @@ def get_element_text(tag):
                 if is_root and not has_children and t and t[0] == '@':
                     raise UnsupportedResourceError(t)
 
-                value += convert_text(t)
+                converted_value, elem_formatted = convert_text(t)
+                if elem_formatted:
+                    formatted = True
+                value += converted_value
         elif ev == 'end':
             # The closing root tag has no info for us at all.
             if not is_root:
                 tag_name, _ = get_tag_name(elem)
                 value += u"</%s>" % tag_name
                 if elem.tail is not None:
-                    value += convert_text(elem.tail)
-    return value
+                    converted_value, elem_formatted = convert_text(elem.tail)
+                    if elem_formatted:
+                        formatted = True
+                    value += converted_value
+    return value, formatted
 
 
 def read_xml(file, warnfunc=dummy_warn):
@@ -309,7 +329,8 @@ def read_xml(file, warnfunc=dummy_warn):
 
         if tag.tag == 'string':
             try:
-                translation = Translation(get_element_text(tag), comment)
+                text, formatted = get_element_text(tag)
+                translation = Translation(text, comment, formatted)
                 result[name] = translation
             except UnsupportedResourceError, e:
                 warnfunc(('"%s" has been skipped because it is a '+
@@ -319,7 +340,8 @@ def read_xml(file, warnfunc=dummy_warn):
             result[name] = list()
             for child in tag.findall('item'):
                 try:
-                    translation = Translation(get_element_text(child), comment)
+                    text, formatted = get_element_text(child)
+                    translation = Translation(text, comment, formatted)
                     result[name].append(translation)
                 except UnsupportedResourceError, e:
                     # XXX: We currently can't handle this, because even if
@@ -399,11 +421,24 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
             for index, item in enumerate(org_value):
                 item_trans = trans_value[index].text if index < len(trans_value) else u''
-                catalog.add(item.text, item_trans, auto_comments=item.comments, context="%s:%d" % (name, index))
+
+                # If the string has formatting markers, indicate it in the gettext output
+                flags = []
+                if item.formatted:
+                    flags.append('c-format')
+
+                catalog.add(item.text, item_trans, auto_comments=item.comments, flags=flags,
+                        context="%s:%d" % (name, index))
 
         else:
             # a normal string
-            catalog.add(org_value.text, trans_value.text if trans_value else u'',
+            flags = []
+
+            # If the string has formatting markers, indicate it in the gettext output
+            if org_value.formatted:
+                flags.append('c-format')
+
+            catalog.add(org_value.text, trans_value.text if trans_value else u'', flags=flags,
                         auto_comments=org_value.comments, context=name)
         # Would it be too much to ask for add() to return the message?
         # TODO: Bring this back when we can ensure it won't be added
