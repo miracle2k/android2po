@@ -8,7 +8,7 @@ from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
 from android2po import xml2po, po2xml
-from ..helpers import ProgramTest
+from ..helpers import ProgramTest, TempProject
 
 
 def test_trailing_whitespace():
@@ -73,6 +73,17 @@ def test_formatted():
         '<resources><string-array name="foo"><item>foo %s bar</item></string-array></resources>'))
     assert "c-format" in list(catalog)[1].flags
     assert not "python-format" in list(catalog)[1].flags
+
+    # Ensure that Babel doesn't add python-format on update ("export")
+    # either. Yes, this is hard to get rid of.
+    p = TempProject(default_xml={'foo': 'with %s format'})
+    try:
+        p.program('init', {'de': ''})
+        p.program('export')
+        catalog = p.get_po('de.po')
+        assert not 'python-format' in list(catalog)[1].flags
+    finally:
+        p.delete()
 
 
 def test_invalid_xhtml():

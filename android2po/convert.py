@@ -387,15 +387,6 @@ def read_xml(file, warnfunc=dummy_warn):
     return result
 
 
-def fix_message(message):
-    # Babel likes to add "python-format" for strings that contain
-    # Python format strings. However, Android uses c-format.
-    # TODO: Babel should really provide a way to disable the
-    # python-format automation.
-    # TODO: would it be too much to ask for add() to return the message?
-    message.flags.discard('python-format')
-
-
 def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
     """Return the Android string resource in ``file`` as a babel
     .po catalog.
@@ -451,7 +442,6 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
                 ctx = "%s:%d" % (name, index)
                 catalog.add(item.text, item_trans, auto_comments=item.comments,
                             flags=flags, context=ctx)
-                fix_message(catalog.get(item.text, context=ctx))
 
         else:
             # a normal string
@@ -463,7 +453,6 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
             catalog.add(org_value.text, trans_value.text if trans_value else u'',
                         flags=flags, auto_comments=org_value.comments, context=name)
-            fix_message(catalog.get(org_value.text, context=name))
 
     if trans_strings is not None:
         # At this point, trans_strings only contains those for which
