@@ -119,8 +119,8 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
         # attention to Android's quoting and escaping.
         space_count = 0
         active_quote = False
-        escaped = False
         active_percent = False
+        active_escape = False
         formatted = False
         i = 0
         text = list(text) + [EOF]
@@ -156,31 +156,31 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                 space_count = 0
 
             # Handle quotes
-            if c == '"' and not escaped:
+            if c == '"' and not active_escape:
                 active_quote = not active_quote
                 del text[i]
                 i -= 1
 
-            # If the strings is run through a formatter, it will have
+            # If the string is run through a formatter, it will have
             # percentage signs for String.format
-            if c == '%' and not escaped:
+            if c == '%' and not active_escape:
                 active_percent = not active_percent
-            elif not escaped and active_percent:
+            elif not active_escape and active_percent:
                 formatted = True
                 active_percent = False
 
             # Handle escapes
             if c == '\\':
-                if not escaped:
-                    escaped = True
+                if not active_escape:
+                    active_escape = True
                 else:
                     # A double-backslash represents a single;
                     # simply deleting the current char will do.
                     del text[i]
                     i -= 1
-                    escaped = False
+                    active_escape = False
             else:
-                if escaped:
+                if active_escape:
                     # Handle the limited amount of escape codes
                     # that we support.
                     # TODO: What about \r, or \r\n?
@@ -207,7 +207,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                                     name, "".join(text[i - 1:i + 1])), 'warning')
                         text[i - 1:i + 1] = ''
                         i -= 1
-                    escaped = False
+                    active_escape = False
 
             i += 1
 
