@@ -159,24 +159,25 @@ class TestAndroidResourceReferences(Xml2PoTest):
         # A warning was printed
         assert 'resource reference' in logs[0]
 
-    def test_empty(self):
-        """The same is true for emtpy resources.
-        """
-        catalog, logs = self.make('foo', '     ')
-        assert len(catalog) == 0
-        assert 'empty' in logs[0]
 
-        catalog, logs = self.make_raw('''
-            <resources>
-                <string-array name="test">
-                    <item></item>
-                    <item>          </item>
-                </string-array>
-            </resources>
-        ''')
-        assert len(catalog) == 0
-        assert 'empty' in logs[0]
-        assert 'empty' in logs[1]
+def test_empty_resources():
+    """Empty resources are removed and not included in a catalog.
+    """
+    catalog, logs = Xml2PoTest.make('foo', '     ')
+    assert len(catalog) == 0
+    assert 'empty' in logs[0]
+
+    catalog, logs = Xml2PoTest.make_raw('''
+        <resources>
+            <string-array name="test">
+                <item></item>
+                <item>          </item>
+            </string-array>
+        </resources>
+    ''')
+    assert len(catalog) == 0
+    assert 'empty' in logs[0]
+    assert 'empty' in logs[1]
 
 
 def test_unsupported_escapes():
