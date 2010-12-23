@@ -38,13 +38,12 @@ class TestFromXML():
         """
         key = 'test'
         extra = {}
-        if warnfunc:
-            extra['warnfunc'] = warnfunc
+        warnfunc = warnfunc or TestWarnFunc()
         catalog = xml2po(StringIO(
             '<resources %s><string name="%s">%s</string></resources>' % (
                 " ".join(['xmlns:%s="%s"' % (name, url)
                           for name, url in namespaces.items()]),
-                key, xml)), **extra)
+                key, xml)), warnfunc=warnfunc)
         match = po if po is not None else xml
         for message in catalog:
             if message.context == key:
@@ -53,7 +52,7 @@ class TestFromXML():
                 assert message.id == match
                 break
         else:
-            raise KeyError()
+            raise KeyError(warnfunc.logs)
 
     def test_basic(self):
         """Test some basic string variations.
