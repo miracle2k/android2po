@@ -1,3 +1,4 @@
+# coding: utf8
 """Test the actual conversion of the text inside an Android xml file
 and a gettext .po file; since the rules of both formats differ, the
 actual characters/bytes of each version will differ, while still
@@ -53,6 +54,31 @@ class TestFromXML():
                 break
         else:
             raise KeyError(warnfunc.logs)
+
+    @classmethod
+    def assert_convert_error(cls, xml, error_match):
+        """Ensure that the given xml resource string cannot be processed and
+        results in the given error.
+        """
+        wfunc = TestWarnFunc()
+        key = 'test'
+        catalog = xml2po(
+            StringIO('<resources><string name="%s">%s</string></resources>' % (
+                key, xml)),
+            warnfunc=wfunc)
+        assert not catalog.get(xml, context=key)
+        for line in wfunc.logs:
+            if error_match in line:
+                return
+        assert False, "error output not matched"
+
+    def test_helpers_negative(self):
+        """Ensure that the helper functions we use (self.assert_*) work
+        by calling them in a way in which they should fail.
+        """
+        assert_raises(AssertionError, self.assert_convert_error, r'good', '')
+        assert_raises(AssertionError, self.assert_convert_error, r'',
+                      'will not be found 12345')
 
     def test_basic(self):
         """Test some basic string variations.
@@ -179,6 +205,44 @@ class TestFromXML():
         # as expected from us: We keep it unchanged.
         # [bug] Used to throw an exception.
         self.assert_convert('edge-case\\')
+
+    def test_unicode_sequences(self):
+        """Test unicode escape codes.
+        """
+        # The simple cases.
+        self.assert_convert(r'\u2022',  u'•')
+        self.assert_convert(r'\u21F6',  u'⇶')    # uppercase hex
+        self.assert_convert(r'\u21f6',  u'⇶')    # lowercase hex
+        self.assert_convert(r'\u21f65',  u'⇶5')
+
+        # The error cases.
+        self.assert_convert_error(r'\uzzzz', 'bad unicode')
+        self.assert_convert_error(r'\u fin',  'bad unicode')
+        self.assert_convert_error(r'\u12 fin',  'bad unicode')
+        self.assert_convert_error(r'\uzzzz foo',  'bad unicode')
+        # Special cases due to how Python's int() works - it ignores
+        # trailing or leading whitespace, which can cause incorrect
+        # sequences to be converted nontheless.
+        self.assert_convert_error(r'\u     |', 'bad unicode')
+        self.assert_convert_error(r'\u  11', 'bad unicode')
+        self.assert_convert_error(r'\u11   |', 'bad unicode')
+        self.assert_convert_error(r'\u11 |', 'bad unicode')
+        self.assert_convert_error(r'\u11\t\t', 'bad unicode')
+
+        # Of course, this wouldln't be the Android resource format
+        # if there weren't again special rules about how this works
+        # when we are at the end of a string; incomplete sequences
+        # are allowed here, with the missing digets assumed to be
+        # zero (big-endian).
+        self.assert_convert(r'\u219',  u'ș')
+        self.assert_convert(r'\u21',  u'!')
+        # Different from other special cases, a trailing whitespace
+        # is not allowed here though.
+        # XXX Making this work right: It's not entirely straightforward
+        # due to the string being trimmed before the unicode unescaping
+        # code get's it's hands on it.
+        #self.assert_convert_error(r'\u21 ',  'bad unicode')
+
 
     def test_unknown_escapes(self):
         """Test an unknown escape sequence is removed.
@@ -380,3 +444,10 @@ class TestToXML():
         # Test a practical case of a double backslash used to protect
         # what would otherwise be considered a escape sequence.
         self.assert_convert('\\n', r'\\n')
+
+        # Unicode escape sequences get converted to the actual unicode
+        # character on export (see issue #6), but there is not good way
+        # for us to decide which characters we should escape on import.
+        # Fortunately, the resource files are unicode, so it's ok if we
+        # place the actual codepoint there.
+        self.assert_convert(u'•', u'•')

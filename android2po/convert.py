@@ -198,6 +198,33 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                     elif c in '"\'@':
                         text[i - 1:i] = ''        # remove the backslash
                         i -= 1
+                    elif c == 'u':
+                        # Unicode sequence. Android is nice enough to deal
+                        # with those in a way which let's us just capture
+                        # the next 4 characters and raise an error if they
+                        # are not valid (rather than having to use a new
+                        # state to parse the unicode sequence).
+                        # Exception: In case we are at the end of the
+                        # string, we support incomplete sequences by
+                        # prefixing the missing digits with zeros.
+                        # Note: max(len()) is needed in the slice due to
+                        # trailing ``None`` element.
+                        max_slice = min(i + 5, len(text)-1)
+                        codepoint_str = "".join(text[i + 1:max_slice])
+                        if len(codepoint_str) < 4:
+                            codepoint_str = u"0" * (4-len(codepoint_str)) + codepoint_str
+                        print repr(codepoint_str)
+                        try:
+                            # We can't trust int() to raise a ValueError,
+                            # it will ignore leading/trailing whitespace.
+                            if not codepoint_str.isalnum():
+                                raise ValueError(codepoint_str)
+                            codepoint = unichr(int(codepoint_str, 16))
+                        except ValueError:
+                            raise UnsupportedResourceError('bad unicode escape sequence')
+
+                        text[i - 1:max_slice] = codepoint
+                        i -= 1
                     else:
                         # All others, remove, like Android does as well.
                         # However, Android does so silently, we show a
