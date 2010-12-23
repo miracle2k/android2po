@@ -140,7 +140,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                 if not active_quote or c is EOF:
                     # Replace by a single space, will get rid of
                     # non-significant newlines/tabs etc.
-                    text[i - space_count:i] = ' '
+                    text[i-space_count : i] = ' '
                     i -= space_count + 1
                 space_count = 0
             elif space_count == 1:
@@ -150,7 +150,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                 # it will be considered significant on import. So,
                 # make sure that this kind of whitespace is always a
                 # standard space.
-                text[i - 1] = ' '
+                text[i-1] = ' '
                 space_count = 0
             else:
                 space_count = 0
@@ -190,13 +190,13 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                         # in the clauses below without issue.
                         pass
                     elif c == 'n':
-                        text[i - 1:i + 1] = '\n'  # an actual newline
+                        text[i-1 : i+1] = '\n'  # an actual newline
                         i -= 1
                     elif c == 't':
-                        text[i - 1:i + 1] = '\t'  # an actual tab
+                        text[i-1 : i+1] = '\t'  # an actual tab
                         i -= 1
                     elif c in '"\'@':
-                        text[i - 1:i] = ''        # remove the backslash
+                        text[i-1 : i] = ''        # remove the backslash
                         i -= 1
                     elif c == 'u':
                         # Unicode sequence. Android is nice enough to deal
@@ -209,8 +209,8 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                         # prefixing the missing digits with zeros.
                         # Note: max(len()) is needed in the slice due to
                         # trailing ``None`` element.
-                        max_slice = min(i + 5, len(text)-1)
-                        codepoint_str = "".join(text[i + 1:max_slice])
+                        max_slice = min(i+5, len(text)-1)
+                        codepoint_str = "".join(text[i+1 : max_slice])
                         if len(codepoint_str) < 4:
                             codepoint_str = u"0" * (4-len(codepoint_str)) + codepoint_str
                         print repr(codepoint_str)
@@ -223,7 +223,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                         except ValueError:
                             raise UnsupportedResourceError('bad unicode escape sequence')
 
-                        text[i - 1:max_slice] = codepoint
+                        text[i-1 : max_slice] = codepoint
                         i -= 1
                     else:
                         # All others, remove, like Android does as well.
@@ -231,8 +231,8 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                         # warning so the dev can fix the problem.
                         warnfunc(('Resource "%s": removing unsupported '
                                   'escape sequence "%s"') % (
-                                    name, "".join(text[i - 1:i + 1])), 'warning')
-                        text[i - 1:i + 1] = ''
+                                    name, "".join(text[i-1 : i+1])), 'warning')
+                        text[i-1 : i+1] = ''
                         i -= 1
                     active_escape = False
 
