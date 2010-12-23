@@ -145,6 +145,9 @@ class TestFromXML():
         self.assert_convert(r'my name is \'earl\'',  'my name is \'earl\'')
         self.assert_convert(r'\\',  '\\')
 
+        # Test an unknown escape sequence - is removed
+        self.assert_convert(r'foo:\kbar',  'foo:bar')
+
         # Test a practical case of a double-backslash protecting an
         # escape sequence.
         self.assert_convert(r'\\n',  r'\n')

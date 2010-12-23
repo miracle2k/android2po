@@ -99,24 +99,30 @@ def test_invalid_xhtml():
     assert etree.tostring(dom) == '<resources><string name="foo"><i>Tag is not closed</i></string></resources>'
 
 
-class TestAndroidResourceReferences:
-    """Dealing with things like @string/app_name is not quite
-    as straightforward as one might think.
-
-    Note that the low-level escaping is tested in test_text.py.
+class Xml2PoTest:
+    """Helper to test xml2po() with ability to check warnings.
     """
-
-    def make_raw(self, content):
-        class Log():
+    @classmethod
+    def make_raw(cls, content):
+        class Log(object):
             logs = []
             def __call__(self, msg, severity):
                 self.logs.append(msg)
         logger = Log()
         return xml2po(StringIO(content), warnfunc=logger), logger.logs
 
-    def make(self, name, value):
-        return self.make_raw('<resources><string name="%s">%s</string></resources>' % (
+    @classmethod
+    def make(cls, name, value):
+        return cls.make_raw('<resources><string name="%s">%s</string></resources>' % (
             name, value))
+
+
+class TestAndroidResourceReferences(Xml2PoTest):
+    """Dealing with things like @string/app_name is not quite
+    as straightforward as one might think.
+
+    Note that the low-level escaping is tested in test_text.py.
+    """
 
     def test_not_exported(self):
         """Strings with @-references are not being included during
@@ -171,6 +177,23 @@ class TestAndroidResourceReferences:
         assert len(catalog) == 0
         assert 'empty' in logs[0]
         assert 'empty' in logs[1]
+
+
+def test_unsupported_escapes():
+    """Make sure we show a warning for escapes that we don't know about.
+    """
+    # For simple strings
+    catalog, logs = Xml2PoTest.make('test', 'foo: \k')
+    assert len(logs) == 1
+    assert 'unsupported escape' in logs[0]
+
+    # For string-arrays
+    catalog, logs = Xml2PoTest.make_raw('''
+              <resources><string-array name="test">
+                  <item>foo: \k</item>
+              </string-array></resources>''')
+    assert len(logs) == 1
+    assert 'unsupported escape' in logs[0]
 
 
 class TestComments:

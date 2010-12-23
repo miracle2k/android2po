@@ -74,7 +74,7 @@ class Translation():
         self.formatted = formatted
 
 
-def get_element_text(tag):
+def get_element_text(tag, name, warnfunc=dummy_warn):
     """Return a tuple of the contents of the lxml ``element`` with the
     Android specific stuff decoded and whether the text includes
     formatting codes.
@@ -196,17 +196,17 @@ def get_element_text(tag):
                         text[i - 1:i + 1] = '\t'  # an actual tab
                         i -= 1
                     elif c in '"\'@':
-                        text[i - 1:i] = ''    # remove the backslash
+                        text[i - 1:i] = ''        # remove the backslash
                         i -= 1
                     else:
-                        # All others, we simply keep unmodified.
-                        # Android itself actually seems to remove them,
-                        # but this is for the developer to resolve;
-                        # we're not trying to recreate the Android
-                        # parser 100%, merely handle those aspects that
-                        # are relevant to convert the text back and
-                        # forth without loss.
-                        pass
+                        # All others, remove, like Android does as well.
+                        # However, Android does so silently, we show a
+                        # warning so the dev can fix the problem.
+                        warnfunc(('Resource "%s": removing unsupported '
+                                  'escape sequence "%s"') % (
+                                    name, "".join(text[i - 1:i + 1])), 'warning')
+                        text[i - 1:i + 1] = ''
+                        i -= 1
                     escaped = False
 
             i += 1
@@ -340,7 +340,7 @@ def read_xml(file, warnfunc=dummy_warn):
 
         if tag.tag == 'string':
             try:
-                text, formatted = get_element_text(tag)
+                text, formatted = get_element_text(tag, name, warnfunc)
             except UnsupportedResourceError, e:
                 warnfunc('"%s" has been skipped, reason: %s' % (
                     name, e.reason), 'info')
@@ -352,7 +352,7 @@ def read_xml(file, warnfunc=dummy_warn):
             result[name] = list()
             for child in tag.findall('item'):
                 try:
-                    text, formatted = get_element_text(child)
+                    text, formatted = get_element_text(child, name, warnfunc)
                 except UnsupportedResourceError, e:
                     # XXX: We currently can't handle this, because even if
                     # we write out a .po file with the proper array
