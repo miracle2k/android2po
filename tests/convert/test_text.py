@@ -12,12 +12,15 @@ the Android 1.6 SDK release, with an application compiled against the
 2.0 SDK release.
 """
 
+from __future__ import absolute_import
+
 import re
 from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
 from android2po import xml2po, po2xml
+from ..helpers import TestWarnFunc
 
 
 class TestFromXML():
@@ -25,7 +28,7 @@ class TestFromXML():
     """
 
     @classmethod
-    def assert_convert(cls, xml, po=None, namespaces={}):
+    def assert_convert(cls, xml, po=None, namespaces={}, warnfunc=None):
         """Helper that passes the string in ``xml`` through our xml
         parsing mechanism, and checks the resulting po catalog string
         against ``po``.
@@ -34,11 +37,14 @@ class TestFromXML():
         expect the string to remain unchanged.
         """
         key = 'test'
+        extra = {}
+        if warnfunc:
+            extra['warnfunc'] = warnfunc
         catalog = xml2po(StringIO(
             '<resources %s><string name="%s">%s</string></resources>' % (
                 " ".join(['xmlns:%s="%s"' % (name, url)
                           for name, url in namespaces.items()]),
-                key, xml)))
+                key, xml)), **extra)
         match = po if po is not None else xml
         for message in catalog:
             if message.context == key:
@@ -145,9 +151,6 @@ class TestFromXML():
         self.assert_convert(r'my name is \'earl\'',  'my name is \'earl\'')
         self.assert_convert(r'\\',  '\\')
 
-        # Test an unknown escape sequence - is removed
-        self.assert_convert(r'foo:\kbar',  'foo:bar')
-
         # Test a practical case of a double-backslash protecting an
         # escape sequence.
         self.assert_convert(r'\\n',  r'\n')
@@ -177,6 +180,14 @@ class TestFromXML():
         # as expected from us: We keep it unchanged.
         # [bug] Used to throw an exception.
         self.assert_convert('edge-case\\')
+
+    def test_unknown_escapes(self):
+        """Test an unknown escape sequence is removed.
+        """
+        wfunc = TestWarnFunc()
+        self.assert_convert(r'foo:\kbar',  'foo:bar', warnfunc=wfunc)
+        assert len(wfunc.logs) == 1
+        assert 'unsupported escape' in wfunc.logs[0]
 
     def test_quoting(self):
         """Android allows quoting using a "..." syntax.

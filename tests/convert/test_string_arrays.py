@@ -1,10 +1,13 @@
 """Android supports string-arrays. Make sure we can handle them properly.
 """
 
+from __future__ import absolute_import
+
 from android2po import xml2po, po2xml
 from StringIO import StringIO
 from lxml import etree
 from babel.messages.catalog import Catalog
+from ..helpers import TestWarnFunc
 
 
 def test_read_template():
@@ -92,6 +95,7 @@ def test_write_order():
     assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
         '<resources><string name="before">foo</string><string-array name="colors"><item>green</item><item>red</item></string-array><string name="after">bar</string></resources>'
 
+
 def test_write_skipped_ids():
     """Test that catalogs were ids are missing are written properly out
     as well.
@@ -104,3 +108,16 @@ def test_write_skipped_ids():
     catalog.add('green', context='colors:4')
     assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
         '<resources><string-array name="colors"><item>green</item><item>red</item></string-array></resources>'
+
+
+def test_unknown_escapes():
+    """Test that unknown escapes are processed correctly, with a warning,
+    for string-array items as well.
+    """
+    wfunc = TestWarnFunc()
+    xml2po(StringIO('''
+              <resources><string-array name="test">
+                  <item>foo: \k</item>
+              </string-array></resources>'''), warnfunc=wfunc)
+    assert len(wfunc.logs) == 1
+    assert 'unsupported escape' in wfunc.logs[0]

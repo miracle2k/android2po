@@ -8,7 +8,7 @@ from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
 from android2po import xml2po, po2xml
-from ..helpers import ProgramTest, TempProject
+from ..helpers import ProgramTest, TempProject, TestWarnFunc
 
 
 def test_trailing_whitespace():
@@ -104,11 +104,7 @@ class Xml2PoTest:
     """
     @classmethod
     def make_raw(cls, content):
-        class Log(object):
-            logs = []
-            def __call__(self, msg, severity):
-                self.logs.append(msg)
-        logger = Log()
+        logger = TestWarnFunc()
         return xml2po(StringIO(content), warnfunc=logger), logger.logs
 
     @classmethod
@@ -178,23 +174,6 @@ def test_empty_resources():
     assert len(catalog) == 0
     assert 'empty' in logs[0]
     assert 'empty' in logs[1]
-
-
-def test_unsupported_escapes():
-    """Make sure we show a warning for escapes that we don't know about.
-    """
-    # For simple strings
-    catalog, logs = Xml2PoTest.make('test', 'foo: \k')
-    assert len(logs) == 1
-    assert 'unsupported escape' in logs[0]
-
-    # For string-arrays
-    catalog, logs = Xml2PoTest.make_raw('''
-              <resources><string-array name="test">
-                  <item>foo: \k</item>
-              </string-array></resources>''')
-    assert len(logs) == 1
-    assert 'unsupported escape' in logs[0]
 
 
 class TestComments:

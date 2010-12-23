@@ -12,7 +12,8 @@ from android2po import program as a2po
 from android2po.convert import read_xml
 
 
-__all__ = ('ProgramTest', 'TempProject', 'SystemExitCaught', 'NonZeroReturned',)
+__all__ = ('ProgramTest', 'TempProject', 'TestWarnFunc',
+           'SystemExitCaught', 'NonZeroReturned',)
 
 
 
@@ -29,6 +30,17 @@ def mkfile(path, content=''):
     f.write(content)
     f.flush()
     f.close()
+
+
+class TestWarnFunc(object):
+    """Object that can be passed to the ``warnfunc`` paramter of
+    for example xml2po(), and collects the warnings so we
+    can test whether they are in fact generated.
+    """
+    def __init__(self):
+        self.logs = []
+    def __call__(self, msg, severity):
+        self.logs.append(msg)
 
 
 class Tee(object):
