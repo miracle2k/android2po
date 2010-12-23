@@ -49,7 +49,7 @@ class TestFromXML():
         for message in catalog:
             if message.context == key:
                 #print "'%s' == '%s'" % (message.id, match)
-                print repr(message.id), '==', repr(match)
+                print repr(match), '==', repr(message.id)
                 assert message.id == match
                 break
         else:
