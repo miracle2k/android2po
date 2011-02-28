@@ -37,6 +37,7 @@ setup(name='android2po',
       classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
+        'Topic :: Software Development :: Localization',
       ],
       author='Michael Elsdoerfer',
       author_email='michael@elsdoerfer.com',
