@@ -1,3 +1,13 @@
+Support a custom column wrap value. If you interact with services that wrap
+differently than a2po (like transifex, does not wrap at all), diffs will
+be unnecessarily large.
+
+If an expport op does not change a .po file, it's modified date should NOT
+change.
+
+Android does not support ISO 639-2 three-letter language codes; ignore those
+rather than generating invalid Android resource directories.
+
 The --verbose option currently doesn't do a lot. We could output more
 diagnostics, for example if and how many strings were ignored etc.
 
