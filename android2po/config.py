@@ -69,7 +69,7 @@ class Config(object):
         },
         {'name': 'require-min-complete',
          'help': 'ignore a language\'s .po file(s) completely if there '+
-                 'aren\'t at lesat the given percentage of translations',
+                 'aren\'t at least the given percentage of translations',
          'dest': 'min_completion',
          'default': 0,
          'kwargs': {'metavar': 'FLOAT', 'type': percentage}

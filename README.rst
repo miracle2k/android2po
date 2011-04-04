@@ -49,10 +49,10 @@ Alternatively, you can also use pip if you prefer:
 
     $ pip install -r requirements.pip
 
-Note: The development version of babel is required. Installing the
-dev version is a bit complicated than usually, so both the ``setup.py``
-file and the ``requirements.pip`` file link to a custom distribution
-I made for android2po. If you prefer to install the babel SVN version
+Note: The development version of Babel is required, which isn't 
+straighforward to install, so both the ``setup.py`` file and the 
+``requirements.pip`` file link to a custom distribution I made for 
+android2po. If you prefer to install the babel SVN version
 yourself, you need to follow the instructions on this page:
 
     http://babel.edgewall.org/wiki/SubversionCheckout
@@ -71,10 +71,11 @@ The basic idea is that:
 * The ``values-XX/strings.xml`` files are fully generated based on
   your ``.po`` files, and should not be modified manually.
 
-Aside from your authority strings.xml file, you usually will want to keep
-your .po files in source control; The generated language-specific
-``strings.xml`` files then contain no additional information, and do not
-need to be source controlled, though you are free to if you like.
+In addition to your authoritative strings.xml file, you will usually 
+also want to keep your .po files in source control; The generated 
+language-specific ``strings.xml`` files then contain no additional 
+information, and do not need to be source controlled, though you are 
+free to if you like.
 
 The environment
 ~~~~~~~~~~~~~~~
@@ -85,7 +86,7 @@ located, and the directory where the gettext .po files should be stored:
 
     $ a2po --android myproject/res --gettext myproject/locale COMMAND
 
-However, to make things easier, the program will automatically try to
+However, to simplify usage, the program will automatically try to
 detect the location of these folders, as follows:
 
 * It will search the directory hierarchy, starting with the your working
@@ -142,7 +143,7 @@ Updating
 ~~~~~~~~
 
 After hacking on your code for a while, you have changed some
-strings (in your authority ``values/strings.xml`` file), and now
+strings (in your authoritative ``values/strings.xml`` file), and now
 you need to pass those on to your translators through your .po files.
 
 Simply do:
