@@ -84,7 +84,7 @@ To be able to run, the script necessarily needs to know about two
 filesystem locations: The directory where your Android resources are
 located, and the directory where the gettext .po files should be stored:
 
-    $ a2po --android myproject/res --gettext myproject/locale COMMAND
+    $ a2po COMMAND --android myproject/res --gettext myproject/locale
 
 However, to simplify usage, the program will automatically try to
 detect the location of these folders, as follows:
