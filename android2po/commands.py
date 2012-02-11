@@ -384,15 +384,16 @@ class InitCommand(Command):
 
             yield action, language_po, template_data, language_data, [language_xml]
 
+    def yield_languages(self, env, source='android'):
+        if env.options.language:
+            for code in env.options.language:
+                yield Language(code, env)
+        else:
+            for l in list_languages(source, env, self.w):
+                yield l
+
     def execute(self):
         env = self.env
-
-        if env.options.language:
-            languages = []
-            for code in env.options.language:
-                languages.append(Language(code, env))
-        else:
-            languages = list_languages('android', env, self.w)
 
         # First, make sure the templates exist. This makes the "init"
         # command everything needed to bootstrap.
@@ -402,7 +403,7 @@ class InitCommand(Command):
         # Only show [exists] actions if a specific language was requested.
         show_exists = not bool(env.options.language)
 
-        for language in languages:
+        for language in self.yield_languages(env):
             # For each language, generate a .po file. In case a language
             # already exists (that is, it's xml files exist, use the
             # existing translations for the new gettext catalog).
@@ -451,7 +452,7 @@ class ExportCommand(InitCommand):
 
         initial_warning = False
 
-        for language in list_languages('gettext', env, w):
+        for language in self.yield_languages(env, 'gettext'):
             for kind in self.env.xmlfiles:
                 target_po = language.po(kind)
                 if not target_po.exists():
