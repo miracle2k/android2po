@@ -7,6 +7,10 @@
 # WingIDE
 /android2po.wpr
 
+# PyCharm
+/.idea/
+
+
 /BRANCH_TODO
 
 # distutils
