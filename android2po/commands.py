@@ -387,6 +387,9 @@ class InitCommand(Command):
     def yield_languages(self, env, source='android'):
         if env.options.language:
             for code in env.options.language:
+                if code == '-':
+                    # This allows specifying - to only build the template
+                    continue
                 yield Language(code, env)
         else:
             for l in list_languages(source, env, self.w):
