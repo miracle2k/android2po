@@ -437,6 +437,13 @@ class ExportCommand(InitCommand):
     Both commands need to write the templates.
     """
 
+    @classmethod
+    def setup_arg_parser(cls, parser):
+        parser.add_argument(
+            'language', nargs='*',
+            help='Language code to export. If not given, all '+
+                 'initialized languages will be exported.')
+
     def execute(self):
         env = self.env
         w = self.w
