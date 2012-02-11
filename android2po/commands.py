@@ -490,7 +490,7 @@ class ExportCommand(InitCommand):
         if initial_warning:
             print ""
             print colored("Warning: One or more .po files were skipped "+\
-                  "because  they did not exist yet. Use the 'init' command "+\
+                  "because they did not exist yet. Use the 'init' command "+\
                   "to generate them for the first time.",
                   fg='magenta', opts=('bold',))
 
