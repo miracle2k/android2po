@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
-import os, sys, re, uuid
+import os, sys, re, uuid, locale
+import codecs
 try:
     from hashlib import md5
 except ImportError:
@@ -206,6 +207,14 @@ class Writer():
         self._pending_actions = []
         self.verbosity = verbosity
 
+        # Create a codec writer wrapping stdout
+        isatty = sys.stdout.isatty() \
+            if hasattr(sys.stdout, 'isatty') else False
+        self.stdout = codecs.getwriter(
+            sys.stdout.encoding
+                if isatty
+                else locale.getpreferredencoding())(sys.stdout)
+
     def action(self, event, *a, **kw):
         action = Writer.Action(self, *a, **kw)
         action.done(event)
@@ -301,14 +310,15 @@ class Writer():
         tag = "[%s]" % action['event']
 
         style = self.get_style_for_action(action)
-        sys.stdout.write(colored("%*s" % (self.max_event_len, tag), opts=('bold',), **style))
-        sys.stdout.write(colored(opts=('noreset',), **style))
-        sys.stdout.write(" ")
-        sys.stdout.write(text)
-        sys.stdout.write(colored())
-        sys.stdout.write("\n")
+        self.stdout.write(colored("%*s" % (self.max_event_len, tag), opts=('bold',), **style))
+        self.stdout.write(colored(opts=('noreset',), **style))
+        self.stdout.write(" ")
+        self.stdout.write(text)
+        self.stdout.write(colored())
+        self.stdout.write("\n")
 
     def _print_message(self, message, severity):
         style = self._get_style_for_level(severity)
-        print colored(" "*(self.max_event_len+1) + u"- %s" % message,
-                       **style)
+        self.stdout.write(colored(" "*(self.max_event_len+1) + u"- %s" % message,
+                          **style))
+        self.stdout.write("\n")
