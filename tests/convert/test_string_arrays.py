@@ -106,8 +106,6 @@ def test_write_order_long_array():
         catalog.add('loop%d' % i, context='colors:%d' % i)
         expected_item_xml = expected_item_xml + '<item>%s</item>' % ('loop%d' % i)
     catalog.add('bar', context='after')
-    print etree.tostring(po2xml(catalog, with_untranslated=True))
-    print '<resources><string name="before">foo</string><string-array name="colors">%s</string-array><string name="after">bar</string></resources>' % expected_item_xml
     assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
         '<resources><string name="before">foo</string><string-array name="colors">%s</string-array><string name="after">bar</string></resources>' % expected_item_xml
 
