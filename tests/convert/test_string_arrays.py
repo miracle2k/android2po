@@ -96,6 +96,22 @@ def test_write_order():
         '<resources><string name="before">foo</string><string-array name="colors"><item>green</item><item>red</item></string-array><string name="after">bar</string></resources>'
 
 
+def test_write_order_long_array():
+    """[Regression] Test that order is maintained for a long array.
+    """
+    catalog = Catalog()
+    catalog.add('foo', context='before')
+    expected_item_xml = ''
+    for i in range(1, 13):
+        catalog.add('loop%d' % i, context='colors:%d' % i)
+        expected_item_xml = expected_item_xml + '<item>%s</item>' % ('loop%d' % i)
+    catalog.add('bar', context='after')
+    print etree.tostring(po2xml(catalog, with_untranslated=True))
+    print '<resources><string name="before">foo</string><string-array name="colors">%s</string-array><string name="after">bar</string></resources>' % expected_item_xml
+    assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
+        '<resources><string name="before">foo</string><string-array name="colors">%s</string-array><string name="after">bar</string></resources>' % expected_item_xml
+
+
 def test_write_skipped_ids():
     """Test that catalogs were ids are missing are written properly out
     as well.

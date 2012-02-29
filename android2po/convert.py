@@ -683,7 +683,7 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
             # string-array - first, sort by index
             array_el = etree.Element('string-array')
             array_el.attrib['name'] = name
-            for k in sorted(value):
+            for k in sorted(value, cmp=lambda x,y: cmp(int(x), int(y))):
                 item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
                 array_el.append(item_el)
             root_tags.append(array_el)
