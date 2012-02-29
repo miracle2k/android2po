@@ -375,6 +375,7 @@ def read_xml(file, warnfunc=dummy_warn):
                 translation = Translation(text, comment, formatted)
                 result[name] = translation
             comment = []
+
         elif tag.tag == 'string-array':
             result[name] = list()
             for child in tag.findall('item'):
@@ -405,11 +406,20 @@ def read_xml(file, warnfunc=dummy_warn):
             # Reset the comments after all the children have been processed.
             comment = []
 
-        # TODO:
-        #elif tag.tag == 'plurals':
-        #    result[name] = dict()
-        #    <for child in tag.find('item'):
-        #        result[name].append(read_value)
+        elif tag.tag == 'plurals':
+            result[name] = dict()
+            for child in tag.findall('item'):
+                quantity = child.attrib['quantity']
+                try:
+                    text, formatted = get_element_text(child, name, warnfunc)
+                except UnsupportedResourceError, e:
+                    warnfunc(('Warning: The plural "%s" contains that can\'t '+
+                              'be processed (reason: %s) - the plural will be '
+                              'incomplete') % (name, e.reason), 'warning')
+                else:
+                    translation = Translation(text, comment, formatted)
+                    result[name][quantity] = translation
+            comment = []
 
     return result
 
@@ -468,6 +478,31 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
                 ctx = "%s:%d" % (name, index)
                 catalog.add(item.text, item_trans, auto_comments=item.comments,
+                            flags=flags, context=ctx)
+
+        elif isinstance(org_value, dict):
+            # a plural, write as "name:quantity=item"
+            if len(org_value) == 0:
+                warnfunc("Warning: plural '%s' is empty" % name, 'warning')
+                continue
+
+            if trans_value and not isinstance(trans_value, dict):
+                warnfunc(('""%s" is a plural in the reference file, '
+                          'but not in the translation.') % name, 'warning')
+                trans_value = {}
+            elif trans_value is None:
+                trans_value = {}
+
+            for index, item in enumerate(org_value):
+                item_trans = trans_value[item].text if item in trans_value else u''
+
+                # If the string has formatting markers, indicate it in the gettext output
+                flags = []
+                if org_value[item].formatted:
+                    flags.append('c-format')
+
+                ctx = "%s:quantity=%s" % (name, item)
+                catalog.add(org_value[item].text, item_trans, auto_comments=org_value[item].comments,
                             flags=flags, context=ctx)
 
         else:
