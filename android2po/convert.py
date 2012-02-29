@@ -460,6 +460,8 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
             for index, item in enumerate(org_value):
                 item_trans = trans_value[index].text if index < len(trans_value) else u''
+                if item.text == item_trans:
+                    item_trans = u''
 
                 # If the string has formatting markers, indicate it in the gettext output
                 flags = []
@@ -471,6 +473,9 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
                             flags=flags, context=ctx)
 
         else:
+            if trans_value and org_value.text == trans_value.text:
+                trans_value = None
+
             # a normal string
             flags = []
 
@@ -611,7 +616,7 @@ def write_to_dom(elem_name, value, message, namespaces=None, warnfunc=dummy_warn
     return elem
 
 
-def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
+def po2xml(catalog, with_untranslated=True, filter=None, warnfunc=dummy_warn):
     """Convert the gettext catalog in ``catalog`` to an XML DOM.
 
     This currently relies entirely in the fact that we can use the context
