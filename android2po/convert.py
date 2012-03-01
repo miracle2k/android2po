@@ -375,6 +375,7 @@ def read_xml(file, warnfunc=dummy_warn):
                 translation = Translation(text, comment, formatted)
                 result[name] = translation
             comment = []
+
         elif tag.tag == 'string-array':
             result[name] = list()
             for child in tag.findall('item'):
@@ -405,11 +406,20 @@ def read_xml(file, warnfunc=dummy_warn):
             # Reset the comments after all the children have been processed.
             comment = []
 
-        # TODO:
-        #elif tag.tag == 'plurals':
-        #    result[name] = dict()
-        #    <for child in tag.find('item'):
-        #        result[name].append(read_value)
+        elif tag.tag == 'plurals':
+            result[name] = dict()
+            for child in tag.findall('item'):
+                quantity = child.attrib['quantity']
+                try:
+                    text, formatted = get_element_text(child, name, warnfunc)
+                except UnsupportedResourceError, e:
+                    warnfunc(('Warning: The plural "%s" contains that can\'t '+
+                              'be processed (reason: %s) - the plural will be '
+                              'incomplete') % (name, e.reason), 'warning')
+                else:
+                    translation = Translation(text, comment, formatted)
+                    result[name][quantity] = translation
+            comment = []
 
     return result
 
@@ -468,6 +478,31 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
                 ctx = "%s:%d" % (name, index)
                 catalog.add(item.text, item_trans, auto_comments=item.comments,
+                            flags=flags, context=ctx)
+
+        elif isinstance(org_value, dict):
+            # a plural, write as "name:quantity=item"
+            if len(org_value) == 0:
+                warnfunc("Warning: plural '%s' is empty" % name, 'warning')
+                continue
+
+            if trans_value and not isinstance(trans_value, dict):
+                warnfunc(('""%s" is a plural in the reference file, '
+                          'but not in the translation.') % name, 'warning')
+                trans_value = {}
+            elif trans_value is None:
+                trans_value = {}
+
+            for index, item in enumerate(org_value):
+                item_trans = trans_value[item].text if item in trans_value else u''
+
+                # If the string has formatting markers, indicate it in the gettext output
+                flags = []
+                if org_value[item].formatted:
+                    flags.append('c-format')
+
+                ctx = "%s:quantity=%s" % (name, item)
+                catalog.add(org_value[item].text, item_trans, auto_comments=org_value[item].comments,
                             flags=flags, context=ctx)
 
         else:
@@ -651,13 +686,17 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
 
         value = message.string or message.id
 
-        if ':' in message.context:
-            # A colon indicates a string array; collect all the
-            # strings of this array with their indices, so when
-            # we're done processing the whole catalog, we can
-            # sort by index and restore the proper array order.
+        if ':quantity=' in message.context:
+            name, item = message.context.split(':quantity=', 2)
+            xml_tree.setdefault(name, {"type": "plural"})
+            if item in xml_tree[name]:
+                warnfunc(('Duplicate quantity %s in plural "%s"; ignoring '+
+                          'the message. The catalog has possibly been '+
+                          'corrupted.') % (index, name), 'error')
+            xml_tree[name][item] = value
+        elif ':' in message.context:
             name, index = message.context.split(':', 2)
-            xml_tree.setdefault(name, {})
+            xml_tree.setdefault(name, {"type": "array"})
             if index in xml_tree[name]:
                 warnfunc(('Duplicate index %s in array "%s"; ignoring '+
                           'the message. The catalog has possibly been '+
@@ -674,12 +713,21 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     namespaces_used = {}
     for name, value in xml_tree.iteritems():
         if isinstance(value, dict):
-            # string-array - first, sort by index
-            array_el = etree.Element('string-array')
-            array_el.attrib['name'] = name
-            for k in sorted(value, cmp=lambda x,y: cmp(int(x), int(y))):
-                item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
-                array_el.append(item_el)
+            type = value["type"]
+            del value["type"]
+            if type == "plural":
+                array_el = etree.Element('plurals')
+                array_el.attrib['name'] = name
+                for k in sorted(value):
+                    item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
+                    item_el.attrib["quantity"] = k
+                    array_el.append(item_el)
+            else:
+                array_el = etree.Element('string-array')
+                array_el.attrib['name'] = name
+                for k in sorted(value, cmp=lambda x,y: cmp(int(x), int(y))):
+                    item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
+                    array_el.append(item_el)
             root_tags.append(array_el)
         else:
             # standard string
