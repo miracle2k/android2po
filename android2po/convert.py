@@ -376,7 +376,7 @@ def read_xml(file, warnfunc=dummy_warn):
             else:
                 translation = Translation(text, comment, formatted)
                 result[name] = translation
-            comment = []
+
         elif tag.tag == 'string-array':
             result[name] = list()
             for child in tag.findall('item'):
@@ -404,14 +404,17 @@ def read_xml(file, warnfunc=dummy_warn):
                 else:
                     translation = Translation(text, comment, formatted)
                     result[name].append(translation)
-            # Reset the comments after all the children have been processed.
-            comment = []
 
         # TODO:
         #elif tag.tag == 'plurals':
         #    result[name] = dict()
         #    <for child in tag.find('item'):
         #        result[name].append(read_value)
+
+        # We now have processed a tag. We either added those comments to
+        # the translation we created based on the tag, or the comments
+        # relate to a tag we do not support. In any case, dismiss them.
+        comment = []
 
     return result
 
