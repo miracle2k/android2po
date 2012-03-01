@@ -625,14 +625,9 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     necessary, even).
 
     If ``with_untranslated`` is given, then strings in the catalog
-    that have no translation are written out with the original id. In
-    the case of a string-array, if ``with_untranslated`` is NOT
-    specified, then only strings that DO have a translation are written
-    out, potentially causing the array to be incomplete.
-    TODO: This should not be the case: Arrays should always contain
-    all elements, whether translated or not (using an empty string
-    instead). When writing tests for this, make sure we generally test
-    the with_untranslated mode, i.e. also the behavior for normal strings.
+    that have no translation are written out with the original id. This
+    option does not affect string-arrays, which for technical reasons
+    always must include all elements.
     """
     # First, process the catalog into a Python sort-of-tree structure.
     # We can't write directly to the XML output, since stuff like
@@ -643,10 +638,6 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     for message in catalog:
         if not message.id:
             # This is the header
-            continue
-
-        if not message.string and not with_untranslated:
-            # Untranslated.
             continue
 
         if not message.context:
@@ -673,6 +664,9 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
                           'corrupted.') % (index, name), 'error')
             xml_tree[name][index] = value
         else:
+            if not message.string and not with_untranslated:
+                # Untranslated.
+                continue
             xml_tree[message.context] = value
 
     # Convert the xml tree we've built into an actual Android XML DOM.

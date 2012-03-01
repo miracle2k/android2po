@@ -78,7 +78,7 @@ def test_write():
     catalog = Catalog()
     catalog.add('green', context='colors:0')
     catalog.add('red', context='colors:1')
-    assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
+    assert etree.tostring(po2xml(catalog)) == \
         '<resources><string-array name="colors"><item>green</item><item>red</item></string-array></resources>'
 
 
@@ -88,31 +88,42 @@ def test_write_order():
     as well as the array strings themselves.
     """
     catalog = Catalog()
-    catalog.add('foo', context='before')
-    catalog.add('red', context='colors:1')
-    catalog.add('green', context='colors:0')
-    catalog.add('bar', context='after')
-    assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
-        '<resources><string name="before">foo</string><string-array name="colors"><item>green</item><item>red</item></string-array><string name="after">bar</string></resources>'
+    catalog.add('foo', 'foo', context='before')
+    catalog.add('red', 'rot', context='colors:1')
+    catalog.add('green', 'gruen', context='colors:0')
+    catalog.add('bar', 'bar', context='after')
+    print etree.tostring(po2xml(catalog))
+    assert etree.tostring(po2xml(catalog)) == \
+        '<resources><string name="before">foo</string><string-array name="colors"><item>gruen</item><item>rot</item></string-array><string name="after">bar</string></resources>'
 
 
 def test_write_order_long_array():
     """[Regression] Test that order is maintained for a long array.
     """
     catalog = Catalog()
-    catalog.add('foo', context='before')
+    catalog.add('foo', 'foo', context='before')
     expected_item_xml = ''
     for i in range(1, 13):
-        catalog.add('loop%d' % i, context='colors:%d' % i)
-        expected_item_xml = expected_item_xml + '<item>%s</item>' % ('loop%d' % i)
-    catalog.add('bar', context='after')
-    assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
+        catalog.add('loop%d' % i, 'schleife%d' % i, context='colors:%d' % i)
+        expected_item_xml = expected_item_xml + '<item>%s</item>' % ('schleife%d' % i)
+    catalog.add('bar', 'bar', context='after')
+    assert etree.tostring(po2xml(catalog)) == \
         '<resources><string name="before">foo</string><string-array name="colors">%s</string-array><string name="after">bar</string></resources>' % expected_item_xml
 
 
+def test_write_missing_translations():
+    """[Regression] Specifically test that arrays are not written to the
+    XML in an incomplete fashion if parts of the array are not translated.
+    """
+    catalog = Catalog()
+    catalog.add('green', context='colors:0')    # does not have a translation
+    catalog.add('red', 'rot', context='colors:1')
+    assert etree.tostring(po2xml(catalog)) ==\
+           '<resources><string-array name="colors"><item>green</item><item>rot</item></string-array></resources>'
+
+
 def test_write_skipped_ids():
-    """Test that catalogs were ids are missing are written properly out
-    as well.
+    """Test that arrays were ids are missing are written properly out as well.
     """
     # TODO: We currently simply maintain order, but shouldn't we instead
     # write out missing ids as empty strings? If the source file says
@@ -120,7 +131,7 @@ def test_write_skipped_ids():
     catalog = Catalog()
     catalog.add('red', context='colors:9')
     catalog.add('green', context='colors:4')
-    assert etree.tostring(po2xml(catalog, with_untranslated=True)) == \
+    assert etree.tostring(po2xml(catalog)) == \
         '<resources><string-array name="colors"><item>green</item><item>red</item></string-array></resources>'
 
 

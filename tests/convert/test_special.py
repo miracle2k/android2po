@@ -99,6 +99,23 @@ def test_invalid_xhtml():
     assert etree.tostring(dom) == '<resources><string name="foo"><i>Tag is not closed</i></string></resources>'
 
 
+def test_untranslated():
+    """Test that by default, untranslated strings are not included in the
+    imported XML.
+    """
+    catalog = Catalog()
+    catalog.add('green', context='color1')
+    catalog.add('red', 'rot', context='color2')
+    assert etree.tostring(po2xml(catalog)) ==\
+           '<resources><string name="color2">rot</string></resources>'
+
+    # If with_untranslated is passed, then all strings are included.
+    # Note that arrays behave differently (they always include all
+    # strings), and this is tested in test_string_arrays.py).
+    assert etree.tostring(po2xml(catalog, with_untranslated=True)) ==\
+           '<resources><string name="color1">green</string><string name="color2">rot</string></resources>'
+
+
 class Xml2PoTest:
     """Helper to test xml2po() with ability to check warnings.
     """
