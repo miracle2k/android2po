@@ -431,6 +431,13 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
 
     Both arguments may also be an already loaded dict of xml strings,
     as returned by ``read_xml``.
+
+    From the application perspective, it will call this function with
+    a ``translations`` object when initializing a new .po file based on
+    an existing resource file (the 'init' command). For 'export', this
+    function is called without translations. It will thus generate what
+    is essentially a POT file (an empty .po file), and this will be
+    merged into the existing .po catalogs, as per how gettext usually
     """
     original_strings = file if isinstance(file, dict) else read_xml(file, warnfunc)
     trans_strings = None
