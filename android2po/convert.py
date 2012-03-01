@@ -347,17 +347,19 @@ def read_xml(file, warnfunc=dummy_warn):
         raise InvalidResourceError(e)
 
     for tag in doc.getroot():
+        # Collect comments so we can add them to the element that they precede.
         if tag.tag == etree.Comment:
             comment.append(tag.text)
             continue
+
+        # Ignore elements we cannot or should not process
         if not 'name' in tag.attrib:
             comment = []
             continue
-        if 'translatable' in tag.attrib:
-            translatable = tag.attrib['translatable']
-            if translatable == 'false':
-                comment = []
-                continue
+        if tag.attrib.get('translatable') == 'false':
+            comment = []
+            continue
+
         name = tag.attrib['name']
         if name in result:
             warnfunc('Duplicate resource id found: %s, ignoring.' % name,
