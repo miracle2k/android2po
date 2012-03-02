@@ -53,14 +53,14 @@ def xml2string(xmldom):
                           encoding=ENCODING, pretty_print=True)
 
 
-def read_xml(action, filename):
+def read_xml(action, filename, **kw):
     """Wrapper around the base read_xml() that pipes warnings
     into the given action.
 
     Also handles errors and returns false if the file is invalid.
     """
     try:
-        return convert.read_xml(filename, warnfunc=action.message)
+        return convert.read_xml(filename, warnfunc=action.message, **kw)
     except convert.InvalidResourceError, e:
         action.done('failed')
         action.message('Failed parsing "%s": %s' % (filename.rel, e), 'error')
@@ -372,7 +372,7 @@ class InitCommand(Command):
                                    'warning')
                     continue
             else:
-                language_data = read_xml(action, language_xml)
+                language_data = read_xml(action, language_xml, language=language)
                 if language_data == False:
                     # File was invalid
                     continue
@@ -492,6 +492,17 @@ class ExportCommand(InitCommand):
                         # Something went wrong parsing the catalog
                         continue
                     lang_catalog.update(catalog)
+
+                    # Set the correct plural forms.
+                    current_plurals = lang_catalog.plural_forms
+                    convert.set_catalog_plural_forms(lang_catalog, language)
+                    if lang_catalog.plural_forms != current_plurals:
+                        action.message(
+                            'The Plural-Forms header of this catalog '
+                            'has been updated to what android2po '
+                            'requires for plurals support. See the '
+                            'README for more information.', 'warning')
+
                     # TODO: Should we include previous?
                     write_file(self, target_po,
                                catalog2string(lang_catalog, include_previous=False),

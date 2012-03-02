@@ -27,7 +27,7 @@ class Language(object):
     """Represents a single language.
     """
 
-    def __init__(self, code, env):
+    def __init__(self, code, env=None):
         self.code = code
         self.env = env
         self.locale = Locale(code) if code else None

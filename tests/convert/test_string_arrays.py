@@ -8,6 +8,7 @@ from StringIO import StringIO
 from lxml import etree
 from babel.messages.catalog import Catalog
 from ..helpers import TestWarnFunc
+from android2po.env import Language
 
 
 def xmlstr2po(string):
@@ -68,7 +69,7 @@ def test_read_language():
                 <item>gruen</item>
             </string-array>
         </resources>
-    ''')))
+    '''), language=Language('de')))
 
     assert len(list(catalog)) == 3
     assert [m.context for m in catalog if m.id] == ['colors:0', 'colors:1']

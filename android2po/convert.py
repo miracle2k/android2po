@@ -20,10 +20,12 @@ from collections import namedtuple
 from compat import OrderedDict
 from lxml import etree
 from babel.messages import Catalog
+from babel import plural
 from babel.plural import _plural_tags as PLURAL_TAGS
 
 
-__all__ = ('xml2po', 'po2xml', 'read_xml', 'InvalidResourceError',)
+__all__ = ('xml2po', 'po2xml', 'read_xml', 'set_catalog_plural_forms',
+           'InvalidResourceError',)
 
 
 class InvalidResourceError(Exception):
@@ -65,6 +67,9 @@ dummy_warn = lambda message, severity=None: None
 # ``Plurals`` can also hold ``Translation`` objects.
 class ResourceTree(OrderedDict):
     language = None
+    def __init__(self, language=None):
+        OrderedDict.__init__(self)
+        self.language = language
 class StringArray(list): pass
 class Plurals(dict): pass
 Translation = namedtuple('Translation', ['text', 'comments', 'formatted'])
@@ -327,12 +332,12 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
     return value, formatted
 
 
-def read_xml(file, warnfunc=dummy_warn):
+def read_xml(file, language=None, warnfunc=dummy_warn):
     """Load all resource names from an Android strings.xml resource file.
 
     The result is a ``ResourceTree`` instance.
     """
-    result = ResourceTree()
+    result = ResourceTree(language)
     comment = []
 
     try:
@@ -429,6 +434,37 @@ def read_xml(file, warnfunc=dummy_warn):
     return result
 
 
+def plural_to_gettext(rule):
+    """This is a copy of the code of ``babel.plural.to_gettext``.
+
+    We need to use a custom version, because the original only returns
+    a full plural_forms string, which the Babel catalog object does not
+    allow us to assign to anything. Instead, we need the expr and the
+    plural count separately. See http://babel.edgewall.org/ticket/291.
+    """
+    from babel.plural import (PluralRule, _fallback_tag, _plural_tags,
+                              _GettextCompiler)
+    rule = PluralRule.parse(rule)
+
+    used_tags = rule.tags | set([_fallback_tag])
+    _compile = _GettextCompiler().compile
+    _get_index = [tag for tag in _plural_tags if tag in used_tags].index
+
+    expr = ['(']
+    for tag, ast in rule.abstract:
+        expr.append('%s ? %d : ' % (_compile(ast), _get_index(tag)))
+    expr.append('%d)' % _get_index(_fallback_tag))
+    return len(used_tags), ''.join(expr)
+
+
+def set_catalog_plural_forms(catalog, language):
+    """Set the catalog to use the correct plural forms for the
+    language.
+    """
+    catalog._num_plurals, catalog._plural_expr = plural_to_gettext(
+        language.locale.plural_form)
+
+
 def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
     """Return ``resources`` as a Babel .po ``Catalog`` instance.
 
@@ -447,7 +483,17 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
     is essentially a POT file (an empty .po file), and this will be
     merged into the existing .po catalogs, as per how gettext usually
     """
+    assert not translations or translations.language
+
     catalog = Catalog()
+    if translations is not None:
+        catalog.locale = translations.language.locale
+        # We cannot let Babel determine the plural expr for the locale by
+        # itself. It will use a custom list of plural expressions rather
+        # than generate them based on CLDR.
+        # See http://babel.edgewall.org/ticket/290.
+        set_catalog_plural_forms(catalog, translations.language)
+
     for name, org_value in resources.iteritems():
         if filter and filter(name):
             continue
@@ -526,25 +572,27 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
             # We pick the quantities supported by the language (the rest
             # would be ignored by Android as well).
             msgstr = ''
-            if translations:
+            if trans_value:
                 allowed_keywords = translations.language.plural_keywords
                 msgstr = ['' for i in range(len(allowed_keywords))]
                 for quantity, translation in trans_value.items():
-                    index = translations.language.plural_keywords.index(quantity)
-                    if not index:
+                    try:
+                        index = translations.language.plural_keywords.index(quantity)
+                    except ValueError:
                         warnfunc(
-                            ('"plurals "%s" uses quantity "%s", which is'
-                             'not supported for this language. See the '
-                             'README for an explanation. The quantity '
-                             'has been ignored') %
+                            ('"plurals "%s" uses quantity "%s", which '
+                             'is not supported for this language. See '
+                             'the README for an explanation. The '
+                             'quantity has been ignored') %
                                     (name, quantity), 'warning')
-                    msgstr[index] = translation.text
+                    else:
+                        msgstr[index] = translation.text
 
             flags = []
             if formatted:
                 flags.append('c-format')
-            catalog.add(msgid, msgstr, flags=flags, auto_comments=comments,
-                        context=name)
+            catalog.add(msgid, tuple(msgstr), flags=flags,
+                        auto_comments=comments, context=name)
 
         else:
             # a normal string
@@ -783,10 +831,11 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
             if not any(message.string):
                 continue
 
-            # We need to work with ``message.string`` directly here,
-            # ``message.id`` will only be a 2-tuple made up of the msgid
-            # and msgid_plural definitions.
-            xml_tree.setdefault(message.context, Plurals())
+            # We need to work with ``message.string`` directly rather than
+            # ``value``, since ``message.id`` will only be a 2-tuple made
+            # up of the msgid and msgid_plural definitions.
+            xml_tree[message.context] = Plurals([
+                (k, None) for k in catalog.language.plural_keywords])
             for index, keyword in enumerate(catalog.language.plural_keywords):
                 # Assume each keyword matches one index.
                 try:

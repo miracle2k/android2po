@@ -119,7 +119,9 @@ class TempProject(object):
             os.makedirs(dirname(filename))
         mkfile(filename, content)
 
-    def write_po(self, catalog, filename):
+    def write_po(self, catalog, filename=None):
+        if not filename:
+            filename = '%s.po' % catalog.locale
         file = open(join(self.locale_dir, '%s' % filename), 'wb')
         try:
             return pofile.write_po(file, catalog)
