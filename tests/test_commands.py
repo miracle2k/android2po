@@ -14,6 +14,17 @@ from babel.messages import Catalog
 from helpers import ProgramTest
 
 
+class TestExport(ProgramTest):
+
+    def test_export_with_empty_master_xml(self):
+        """[Regression] Test that export works fine if the master
+        resource is empty."""
+        p = self.setup_project(xml_langs=['de'])
+        p.write_xml(data="""<resources></resources>""", lang='de')
+        p.write_po(Catalog('de'))
+        assert not '[failed]' in p.program('export')
+
+
 class TestImport(ProgramTest):
 
     pass

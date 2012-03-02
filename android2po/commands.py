@@ -488,7 +488,7 @@ class ExportCommand(InitCommand):
                     action.done('failed', status='%s is not a valid locale' % language.code)
                 else:
                     catalog, _ = self.make_or_get_template(kind, action)
-                    if not catalog:
+                    if catalog is None:
                         # Something went wrong parsing the catalog
                         continue
                     lang_catalog.update(catalog)
