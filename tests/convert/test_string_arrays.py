@@ -103,7 +103,7 @@ def test_write_order_long_array():
     catalog = Catalog()
     catalog.add('foo', 'foo', context='before')
     expected_item_xml = ''
-    for i in range(1, 13):
+    for i in range(0, 13):
         catalog.add('loop%d' % i, 'schleife%d' % i, context='colors:%d' % i)
         expected_item_xml = expected_item_xml + '<item>%s</item>' % ('schleife%d' % i)
     catalog.add('bar', 'bar', context='after')
@@ -125,14 +125,15 @@ def test_write_missing_translations():
 def test_write_skipped_ids():
     """Test that arrays were ids are missing are written properly out as well.
     """
-    # TODO: We currently simply maintain order, but shouldn't we instead
-    # write out missing ids as empty strings? If the source file says
-    # colors:9, that likely means the dev. expects 8 strings before it.
+    # TODO: Indices missing at the end of the array will not be noticed,
+    # because we are not aware of the arrays full length.
+    # TODO: If we where smart enough to look in the original resource XML,
+    # we could fill in missing array strings with the untranslated value.
     catalog = Catalog()
-    catalog.add('red', context='colors:9')
-    catalog.add('green', context='colors:4')
-    assert etree.tostring(po2xml(catalog)) == \
-        '<resources><string-array name="colors"><item>green</item><item>red</item></string-array></resources>'
+    catalog.add('red', context='colors:3')
+    catalog.add('green', context='colors:1')
+    assert etree.tostring(po2xml(catalog)) ==\
+        '<resources><string-array name="colors"><item/><item>green</item><item/><item>red</item></string-array></resources>'
 
 
 def test_unknown_escapes():
