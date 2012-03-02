@@ -5,6 +5,7 @@ import re
 import glob
 from argparse import Namespace
 from os import path
+from babel import Locale
 from .config import Config
 from .utils import Path, format_to_re
 from .convert import read_xml, InvalidResourceError
@@ -29,6 +30,10 @@ class Language(object):
     def __init__(self, code, env):
         self.code = code
         self.env = env
+        self.locale = Locale(code) if code else None
+
+    def __unicode__(self):
+        return unicode(self.code)
 
     def xml(self, kind):
         # Android uses a special language code format for the region part
@@ -47,8 +52,10 @@ class Language(object):
             'locale': self.code}
         return self.env.path(self.env.gettext_dir, filename)
 
-    def __unicode__(self):
-        return unicode(self.code)
+    @property
+    def plural_keywords(self):
+        # Use .abstract rather than .rules because latter loses order
+        return [r[0] for r in self.locale.plural_form.abstract] + ['other']
 
 
 class DefaultLanguage(Language):
@@ -60,7 +67,10 @@ class DefaultLanguage(Language):
     """
 
     def __init__(self, env):
-        super(DefaultLanguage, self).__init__('<def>', env)
+        super(DefaultLanguage, self).__init__(None, env)
+
+    def __unicode__(self):
+        return u'<def>'
 
     def xml(self, kind):
         return self.env.path(self.env.resource_dir, 'values/%s.xml' % kind)

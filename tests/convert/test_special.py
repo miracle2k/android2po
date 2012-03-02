@@ -7,31 +7,35 @@ from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
-from android2po import xml2po, po2xml
+from android2po import xml2po, po2xml, read_xml
 from ..helpers import ProgramTest, TempProject, TestWarnFunc
+
+
+def xmlstr2po(string):
+    return xml2po(read_xml(StringIO(string)))
 
 
 def test_trailing_whitespace():
     # [bug] Make sure that whitespace after the <string> tag does not
     # end up as part of the value.
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo">bar</string>    \t\t  </resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo">bar</string>    \t\t  </resources>')
     assert list(catalog)[1].id == 'bar'
 
 
 def test_translatable():
     """Strings marked as translatable=False will be skipped.
     """
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo" translatable="false">bar</string></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo" translatable="false">bar</string></resources>')
     assert len(catalog) == 0
 
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo" translatable="true">bar</string></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo" translatable="true">bar</string></resources>')
     assert list(catalog)[1].id == 'bar'
 
-    catalog = xml2po(StringIO(
-        '<resources><string-array name="foo" translatable="false"><item>bla</item></string-array></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string-array name="foo" translatable="false"><item>bla</item></string-array></resources>')
     assert len(catalog) == 0
 
 
@@ -39,38 +43,38 @@ def test_formatted():
     """Strings with "%1$s" and other Java-style format markers
        will be marked as c-format in the gettext flags.
     """
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo">foo %1$s bar</string></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo">foo %1$s bar</string></resources>')
     assert "c-format" in list(catalog)[1].flags
 
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo">foo %% bar</string></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo">foo %% bar</string></resources>')
     assert "c-format" not in list(catalog)[1].flags
 
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo">foo</string></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo">foo</string></resources>')
     assert "c-format" not in list(catalog)[1].flags
 
-    catalog = xml2po(StringIO(
-        '<resources><string-array name="foo"><item>foo %1$s bar</item></string-array></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string-array name="foo"><item>foo %1$s bar</item></string-array></resources>')
     assert "c-format" in list(catalog)[1].flags
 
-    catalog = xml2po(StringIO(
-        '<resources><string-array name="foo"><item>foo %% bar</item></string-array></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string-array name="foo"><item>foo %% bar</item></string-array></resources>')
     assert "c-format" not in list(catalog)[1].flags
 
-    catalog = xml2po(StringIO(
-        '<resources><string-array name="foo"><item>bar</item></string-array></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string-array name="foo"><item>bar</item></string-array></resources>')
     assert "c-format" not in list(catalog)[1].flags
 
     # Babel likes to add python-format
-    catalog = xml2po(StringIO(
-        '<resources><string name="foo">foo %s bar</string></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string name="foo">foo %s bar</string></resources>')
     assert "c-format" in list(catalog)[1].flags
     assert not "python-format" in list(catalog)[1].flags
 
-    catalog = xml2po(StringIO(
-        '<resources><string-array name="foo"><item>foo %s bar</item></string-array></resources>'))
+    catalog = xmlstr2po(
+        '<resources><string-array name="foo"><item>foo %s bar</item></string-array></resources>')
     assert "c-format" in list(catalog)[1].flags
     assert not "python-format" in list(catalog)[1].flags
 
@@ -122,7 +126,8 @@ class Xml2PoTest:
     @classmethod
     def make_raw(cls, content):
         logger = TestWarnFunc()
-        return xml2po(StringIO(content), warnfunc=logger), logger.logs
+        return xml2po(read_xml(StringIO(content), warnfunc=logger),
+                      warnfunc=logger), logger.logs
 
     @classmethod
     def make(cls, name, value):
@@ -198,19 +203,19 @@ class TestComments:
     """
 
     def test_string(self):
-        catalog = xml2po(StringIO(
+        catalog = xmlstr2po(
         '''<resources>
               <!-- Comment 1 -->
               <!-- Comment 2 -->
               <string name="string1">value1</string>
               <string name="string2">value2</string>
-           </resources>'''))
+           </resources>''')
         # TODO: Should those be stripped? Otherwise formatted (linebreaks etc)?
         assert catalog.get('value1', context='string1').auto_comments == [' Comment 1 ', ' Comment 2 ']
         assert catalog.get('value2', context='string2').auto_comments == []
 
     def test_string_array(self):
-        catalog = xml2po(StringIO(
+        catalog = xmlstr2po(
         '''<resources>
               <!-- Comment 1 -->
               <!-- Comment 2 -->
@@ -220,7 +225,7 @@ class TestComments:
                   <item>item2</item>
               </string-array>
               <string name="string">value</string>
-           </resources>'''))
+           </resources>''')
         assert catalog.get('item1', context='array:0').auto_comments == [' Comment 1 ', ' Comment 2 ']
         assert catalog.get('item2', context='array:1').auto_comments == [' Comment 1 ', ' Comment 2 ']
         assert catalog.get('value', context='string').auto_comments == []
@@ -228,13 +233,13 @@ class TestComments:
     def test_translatable(self):
         """[bug] Make sure translatable=false and comments play nice together.
         """
-        catalog = xml2po(StringIO(
+        catalog = xmlstr2po(
         '''<resources>
               <!-- Comment 1 -->
               <!-- Comment 2 -->
               <string name="string1" translatable="false">value1</string>
               <string name="string2">value2</string>
-           </resources>'''))
+           </resources>''')
         # The comments of string1 do not end up with string2.
         assert catalog.get('value2', context='string2').auto_comments == []
 
@@ -242,12 +247,12 @@ class TestComments:
         """This is an edge-case, but we don't (can't) process strings
         without a name. Comments are not passed along there either.
         """
-        catalog = xml2po(StringIO(
+        catalog = xmlstr2po(
         '''<resources>
               <!-- Comment 1 -->
               <!-- Comment 2 -->
               <string>value1</string>
               <string name="string2">value2</string>
-           </resources>'''))
+           </resources>''')
         # The comments of string1 do not end up with string2.
         assert catalog.get('value2', context='string2').auto_comments == []

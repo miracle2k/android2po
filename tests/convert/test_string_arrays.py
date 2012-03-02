@@ -3,24 +3,28 @@
 
 from __future__ import absolute_import
 
-from android2po import xml2po, po2xml
+from android2po import xml2po, po2xml, read_xml
 from StringIO import StringIO
 from lxml import etree
 from babel.messages.catalog import Catalog
 from ..helpers import TestWarnFunc
 
 
+def xmlstr2po(string):
+    return xml2po(read_xml(StringIO(string)))
+
+
 def test_read_template():
     """Test basic read.
     """
-    catalog = xml2po(StringIO('''
+    catalog = xmlstr2po('''
         <resources>
             <string-array name="colors">
                 <item>red</item>
                 <item>green</item>
             </string-array>
         </resources>
-    '''))
+    ''')
     assert len(list(catalog)) == 3
     assert [m.context for m in catalog if m.id] == ['colors:0', 'colors:1']
 
@@ -30,7 +34,7 @@ def test_read_order():
     in the final catalog as the string-array had in the xml file, e.g.
     order is maintained for the string-array.
     """
-    catalog = xml2po(StringIO('''
+    catalog = xmlstr2po('''
         <resources>
             <string name="before">foo</string>
             <string-array name="colors">
@@ -39,7 +43,7 @@ def test_read_order():
             </string-array>
             <string name="after">bar</string>
         </resources>
-    '''))
+    ''')
     assert len(list(catalog)) == 5
     assert [m.context for m in catalog if m.id] == [
                 'before', 'colors:0', 'colors:1', 'after']
@@ -50,21 +54,21 @@ def test_read_language():
     of a string array are properly matched up with to strings in the
     untranslated template.
     """
-    catalog, _ = xml2po(StringIO('''
+    catalog, _ = xml2po(read_xml(StringIO('''
         <resources>
             <string-array name="colors">
                 <item>red</item>
                 <item>green</item>
             </string-array>
         </resources>
-    '''), StringIO('''
+    ''')), read_xml(StringIO('''
         <resources>
             <string-array name="colors">
                 <item>rot</item>
                 <item>gruen</item>
             </string-array>
         </resources>
-    '''))
+    ''')))
 
     assert len(list(catalog)) == 3
     assert [m.context for m in catalog if m.id] == ['colors:0', 'colors:1']
@@ -141,9 +145,9 @@ def test_unknown_escapes():
     for string-array items as well.
     """
     wfunc = TestWarnFunc()
-    xml2po(StringIO('''
+    xml2po(read_xml(StringIO('''
               <resources><string-array name="test">
                   <item>foo: \k</item>
-              </string-array></resources>'''), warnfunc=wfunc)
+              </string-array></resources>'''), warnfunc=wfunc))
     assert len(wfunc.logs) == 1
     assert 'unsupported escape' in wfunc.logs[0]

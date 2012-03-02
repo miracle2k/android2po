@@ -489,7 +489,7 @@ class ExportCommand(InitCommand):
                 else:
                     catalog, _ = self.make_or_get_template(kind, action)
                     if not catalog:
-                        # Something weng wrong parsing the catalog
+                        # Something went wrong parsing the catalog
                         continue
                     lang_catalog.update(catalog)
                     # TODO: Should we include previous?
@@ -525,6 +525,7 @@ class ImportCommand(Command):
             if not language_po.exists():
                 continue
             catalogs[kind] = catalog = read_catalog(language_po)
+            catalog.language = language
             ntotal, ntrans, nfuzzy = get_catalog_counts(catalog)
             count_total += ntotal
             count_translated += ntrans
