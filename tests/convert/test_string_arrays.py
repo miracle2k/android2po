@@ -83,8 +83,7 @@ def test_write():
     catalog = Catalog()
     catalog.add('green', context='colors:0')
     catalog.add('red', context='colors:1')
-    assert etree.tostring(po2xml(catalog)) == \
-        '<resources><string-array name="colors"><item>green</item><item>red</item></string-array></resources>'
+    assert po2xml(catalog) == {'colors': ['green', 'red']}
 
 
 def test_write_order():
@@ -97,9 +96,10 @@ def test_write_order():
     catalog.add('red', 'rot', context='colors:1')
     catalog.add('green', 'gruen', context='colors:0')
     catalog.add('bar', 'bar', context='after')
-    print etree.tostring(po2xml(catalog))
-    assert etree.tostring(po2xml(catalog)) == \
-        '<resources><string name="before">foo</string><string-array name="colors"><item>gruen</item><item>rot</item></string-array><string name="after">bar</string></resources>'
+    assert po2xml(catalog) == {
+        'before': 'foo',
+        'colors': ['gruen', 'rot'],
+        'after': 'bar'}
 
 
 def test_write_order_long_array():
@@ -107,13 +107,16 @@ def test_write_order_long_array():
     """
     catalog = Catalog()
     catalog.add('foo', 'foo', context='before')
-    expected_item_xml = ''
     for i in range(0, 13):
         catalog.add('loop%d' % i, 'schleife%d' % i, context='colors:%d' % i)
-        expected_item_xml = expected_item_xml + '<item>%s</item>' % ('schleife%d' % i)
     catalog.add('bar', 'bar', context='after')
-    assert etree.tostring(po2xml(catalog)) == \
-        '<resources><string name="before">foo</string><string-array name="colors">%s</string-array><string name="after">bar</string></resources>' % expected_item_xml
+    assert po2xml(catalog) == {
+        'before': 'foo',
+        'colors': ['schleife0', 'schleife1', 'schleife2', 'schleife3',
+                   'schleife4', 'schleife5', 'schleife6', 'schleife7',
+                   'schleife8', 'schleife9', 'schleife10', 'schleife11',
+                   'schleife12'],
+        'after': 'bar'}
 
 
 def test_write_missing_translations():
@@ -123,8 +126,7 @@ def test_write_missing_translations():
     catalog = Catalog()
     catalog.add('green', context='colors:0')    # does not have a translation
     catalog.add('red', 'rot', context='colors:1')
-    assert etree.tostring(po2xml(catalog)) ==\
-           '<resources><string-array name="colors"><item>green</item><item>rot</item></string-array></resources>'
+    assert po2xml(catalog) == {'colors': ['green', 'rot']}
 
 
 def test_write_skipped_ids():
@@ -137,8 +139,7 @@ def test_write_skipped_ids():
     catalog = Catalog()
     catalog.add('red', context='colors:3')
     catalog.add('green', context='colors:1')
-    assert etree.tostring(po2xml(catalog)) ==\
-        '<resources><string-array name="colors"><item/><item>green</item><item/><item>red</item></string-array></resources>'
+    assert po2xml(catalog) == {'colors': [None, 'green', None, 'red']}
 
 
 def test_unknown_escapes():

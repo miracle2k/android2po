@@ -11,6 +11,7 @@ right thing.
 
 from nose.tools import assert_raises
 from babel.messages import Catalog
+from android2po.convert import StringArray
 from helpers import ProgramTest
 
 
@@ -135,8 +136,7 @@ class TestDealWithBrokenInput(ProgramTest):
         """A warning is shown if a string array is empty.
         """
         p = self.setup_project()
-        # TODO: Can use a dict after .convert refactoring
-        p.write_xml(data="""<resources><string-array name="s1"></string-array></resources>""")
+        p.write_xml(data={'s1': StringArray([])})
         assert 'is empty' in self.runprogram(p, 'init')
         assert len(p.get_po('template.pot')) == 0
 
@@ -145,9 +145,8 @@ class TestDealWithBrokenInput(ProgramTest):
         normal string in the translation.
         """
         p = self.setup_project(xml_langs=['de'])
-        # TODO: Can use dicts after .convert refactoring
-        p.write_xml(data="""<resources><string-array name="s1"><item>value</item></string-array></resources>""")
-        p.write_xml(data="""<resources><string name="s1">value</string></resources>""", lang='de')
+        p.write_xml(data={'s1': StringArray(['value'])})
+        p.write_xml(data={'s1': 'value'}, lang='de')
         assert 'string-array in the reference' in self.runprogram(p, 'init')
         assert len(p.get_po('template.pot')) == 1
 

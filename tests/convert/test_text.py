@@ -20,7 +20,7 @@ from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
-from android2po import xml2po, po2xml, read_xml
+from android2po import xml2po, po2xml, read_xml, write_xml
 from ..helpers import TestWarnFunc
 
 
@@ -326,7 +326,7 @@ class TestToXML():
         catalog = Catalog()
         catalog.add(po, po, context=key)
         warnfunc = TestWarnFunc()
-        dom = po2xml(catalog, warnfunc=warnfunc)
+        dom = write_xml(po2xml(catalog, warnfunc=warnfunc), warnfunc=warnfunc)
         elem = dom.xpath('/resources/string[@name="%s"]' % key)[0]
         elem_as_text = etree.tostring(elem, encoding=unicode)
         value = re.match("^[^>]+>(.*)<[^<]+$", elem_as_text).groups(1)[0]

@@ -6,10 +6,11 @@ except ImportError:
     import StringIO
 import tempfile
 import shutil
+from lxml import etree
 
 from babel.messages import pofile
 from android2po import program as a2po
-from android2po.convert import read_xml
+from android2po.convert import read_xml, write_xml
 
 
 __all__ = ('ProgramTest', 'TempProject', 'TestWarnFunc',
@@ -104,12 +105,7 @@ class TempProject(object):
         if isinstance(data, basestring):
             content = data
         else:
-            # Could use the more robust XML writing functions from
-            # android2po.convert.
-            content = '<resources>'
-            for k, v in data.iteritems():
-                content += '<string name="%s">%s</string>' % (k, v)
-            content += '</resources>'
+            content = etree.tostring(write_xml(data))
 
         folder = 'values'
         if lang:

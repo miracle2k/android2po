@@ -1,18 +1,14 @@
-"""Contains the functions that do the hard work.
+"""This module does the hard work of converting.
 
-TODO: I would like to refactor this at some point. Right now, the xml=>po
-process is already split into the read_xml() to convert an XML file into
-a dict representation, and then converting this dict into a catalog.
+It uses a simply dict-based memory representation of Android XML string
+resource files, via the ``ResourceTree`` class. The .po files are
+represented in memory via Babel's ``Catalog`` class.
 
-You'd like to split the write process in the base way, so that we can write
-Android resources XMLs by simply giving the data as a dict.
+The process thus is:
 
-Here's how it could look like:
+    read_xml() -> ResourceTree -> xml2po() -> Catalog -> po2xml
+    -> ResourceTree -> write_xml()
 
-[FILE/STRING] -> read_xml [DICT] -> xml2po -> [CATALOG] -> po2xml -> [DICT] -> write_xml/build_xml
-
-xml2po would be split from read_xml() for good, i.e. it would only accept
-dicts, not filenames or file objects.
 """
 
 from itertools import chain
@@ -20,12 +16,11 @@ from collections import namedtuple
 from compat import OrderedDict
 from lxml import etree
 from babel.messages import Catalog
-from babel import plural
 from babel.plural import _plural_tags as PLURAL_TAGS
 
 
-__all__ = ('xml2po', 'po2xml', 'read_xml', 'set_catalog_plural_forms',
-           'InvalidResourceError',)
+__all__ = ('xml2po', 'po2xml', 'read_xml', 'write_xml',
+           'set_catalog_plural_forms', 'InvalidResourceError',)
 
 
 class InvalidResourceError(Exception):
@@ -744,7 +739,8 @@ def sort_plural_keywords(x, y):
 
 
 def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
-    """Convert the gettext catalog in ``catalog`` to an XML DOM.
+    """Convert the gettext catalog in ``catalog`` to a ``ResourceTree``
+    instance (our in-memory representation of an Android XML resource)
 
     This currently relies entirely in the fact that we can use the context
     of each message to specify the Android resource name (which we need
@@ -780,12 +776,7 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
             pass
         plural_validation['done'] = True
 
-    # First, process the catalog into a Python sort-of-tree structure.
-    # We can't write directly to the XML output, since stuff like
-    # string-array items are not guaranteed to appear in the correct
-    # order in the catalog. We "xml tree" pulls these things together.
-    # It is quite similar to the structure returned by read_xml().
-    xml_tree = OrderedDict()
+    xml_tree = ResourceTree(getattr(catalog, 'language', None))
     for message in catalog:
         if not message.id:
             # This is the header
@@ -852,10 +843,17 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
                 continue
             xml_tree[message.context] = value
 
+    return xml_tree
+
+
+def write_xml(tree, warnfunc=dummy_warn):
+    """Takes a ``ResourceTree`` (our in-memory representation of an Android
+    XML resource) and returns a XML DOM (via an etree.Element).
+    """
     # Convert the xml tree we've built into an actual Android XML DOM.
     root_tags = []
     namespaces_used = {}
-    for name, value in xml_tree.iteritems():
+    for name, value in tree.iteritems():
         if isinstance(value, StringArray):
             # string-array - first, sort by index
             array_el = etree.Element('string-array')

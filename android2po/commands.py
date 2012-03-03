@@ -42,14 +42,15 @@ def catalog2string(catalog, **kwargs):
     return sf.getvalue()
 
 
-def xml2string(xmldom):
-    """Helper that returns the DOM of an XML as a string.
+def xml2string(tree, action):
+    """Helper that returns a ``ResourceTree`` as an XML string.
 
     TODO: It would be cool if this could try to recreate the formatting
     of the original xml file.
     """
     ENCODING = 'utf-8'
-    return etree.tostring(xmldom, xml_declaration=True,
+    dom = convert.write_xml(tree, warnfunc=action.message)
+    return etree.tostring(dom, xml_declaration=True,
                           encoding=ENCODING, pretty_print=True)
 
 
@@ -565,7 +566,8 @@ class ImportCommand(Command):
                 # Idially, we'd refactor convert.py so that we can use a
                 # dict to represent a resource XML file.
                 xmldata = po2xml(self.env, action, Catalog(locale=language.code))
-                write_file(self, language_xml, xml2string(xmldata), action=False)
+                write_file(self, language_xml, xml2string(xmldata, action),
+                           action=False)
                 action.done('skipped', status=('%s catalogs aren\'t '
                                                'complete enough - %.2f done' % (
                                                    language.code,
@@ -577,10 +579,8 @@ class ImportCommand(Command):
                 self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
                 continue
 
-            write_file(self,
-                       language_xml,
-                       xml2string(po2xml(self.env, action, catalogs[kind])),
-                       action=action)
+            content = xml2string(po2xml(self.env, action, catalogs[kind]), action)
+            write_file(self, language_xml, content, action=action)
 
     def execute(self):
         for language in list_languages('gettext', self.env, self.w):

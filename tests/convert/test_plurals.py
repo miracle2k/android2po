@@ -82,11 +82,8 @@ def test_write():
     catalog = Catalog()
     catalog.language = Language('bs') # Bosnian
     catalog.add(('foo', 'foos'), ('one', 'few', 'many', 'other'), context='foo')
-    assert etree.tostring(po2xml(catalog)) == '<resources><plurals name="foo"><item quantity="one">one</item><item quantity="few">few</item><item quantity="many">many</item><item quantity="other">other</item></plurals></resources>'
-
-    # TODO: specifically test that xml plural keys are written out in sorted
-    # order. it will be possible to test this once write_xml() is it's own
-    # function
+    assert po2xml(catalog) == {'foo': {
+        'few': 'few', 'many': 'many', 'other': 'other', 'one': 'one'}}
 
 
 def test_write_incomplete_plural():
@@ -94,7 +91,8 @@ def test_write_incomplete_plural():
     catalog = Catalog()
     catalog.language = Language('bs') # Bosnian
     catalog.add(('foo', 'foos'), ('one', '', 'many', ''), context='foo')
-    assert etree.tostring(po2xml(catalog)) == '<resources><plurals name="foo"><item quantity="one">one</item><item quantity="few"/><item quantity="many">many</item><item quantity="other"/></plurals></resources>'
+    assert po2xml(catalog) == {'foo': {
+        'few': '', 'many': 'many', 'other': '', 'one': 'one'}}
 
 
 def test_write_incorrect_plural():
@@ -115,7 +113,7 @@ def test_write_incorrect_plural():
     assert '2 plurals, we expect 3' in wfunc.logs[0]
 
     # The missing plural is empty
-    assert etree.tostring(xml) == '<resources><plurals name="foo"><item quantity="one">a</item><item quantity="few">b</item><item quantity="other"/></plurals></resources>'
+    assert xml == {'foo': {'few': 'b', 'other': None, 'one': 'a'}}
 
 
 def test_write_ignore_untranslated_plural():
@@ -124,10 +122,10 @@ def test_write_ignore_untranslated_plural():
     catalog = Catalog()
     catalog.language =  Language('en')
     catalog.add(('foo', 'foos'), context='foo')
-    assert etree.tostring(po2xml(catalog)) == '<resources/>'
+    assert po2xml(catalog) == {}
 
     # Even with ``with_untranslated``, we still do not include
     # empty plural (they would just block access to the untranslated
     # master version, which we cannot copy into the target).
-    assert etree.tostring(po2xml(catalog, with_untranslated=True)) == '<resources/>'
+    assert po2xml(catalog) == {}
 

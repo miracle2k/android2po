@@ -7,8 +7,8 @@ from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
-from android2po import xml2po, po2xml, read_xml
-from ..helpers import ProgramTest, TempProject, TestWarnFunc
+from android2po import xml2po, po2xml, read_xml, write_xml
+from ..helpers import TempProject, TestWarnFunc
 
 
 def xmlstr2po(string):
@@ -97,7 +97,7 @@ def test_invalid_xhtml():
     c.add('Foo', '<i>Tag is not closed', context="foo")
 
     # [bug] This caused an exception in 16263b.
-    dom = po2xml(c)
+    dom = write_xml(po2xml(c))
 
     # The tag was closed automatically (our loose parser tries to fix errors).
     assert etree.tostring(dom) == '<resources><string name="foo"><i>Tag is not closed</i></string></resources>'
@@ -110,14 +110,13 @@ def test_untranslated():
     catalog = Catalog()
     catalog.add('green', context='color1')
     catalog.add('red', 'rot', context='color2')
-    assert etree.tostring(po2xml(catalog)) ==\
-           '<resources><string name="color2">rot</string></resources>'
+    assert po2xml(catalog) == {'color2': 'rot'}
 
     # If with_untranslated is passed, then all strings are included.
     # Note that arrays behave differently (they always include all
     # strings), and this is tested in test_string_arrays.py).
-    assert etree.tostring(po2xml(catalog, with_untranslated=True)) ==\
-           '<resources><string name="color1">green</string><string name="color2">rot</string></resources>'
+    assert po2xml(catalog, with_untranslated=True) ==\
+           {'color1': 'green', 'color2': 'rot'}
 
 
 class Xml2PoTest:
