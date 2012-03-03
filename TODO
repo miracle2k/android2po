@@ -59,19 +59,6 @@ and/or file (allowing us to handle files like, say, arrays.xml as well).
 "import" can then use those comments to properly restore the strings in
 the correct locations.
 
-Support <plurals>/getQuantityString(). There seems to be a lack of
-documentation on the subject, but initial testing seems to indicate that
-only the following quantities are supported: zero, one, two, other. This
-would indeed simplify the plurals definition we'd have to generate for
-the .po files we export. Import would be more though, since we wouldn't
-be able to support all types of plurals that gettext supports. Also, we
-need to parse the plural definition in gettext files, which might be hard.
-Another thing to consider in this respect is the "name" attribute on each
-plural form (in addition to the group name) - Android allows it, but does
-it have any effect?
-See also:
-	http://translate.sourceforge.net/wiki/guide/translation/plurals
-
 More explicitly handle empty strings, like print a warning that they
 will not be included on export; on import, we might want to include
 them. We could also put in warning comments in the generated file as

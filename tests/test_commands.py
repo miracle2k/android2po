@@ -14,9 +14,55 @@ from babel.messages import Catalog
 from helpers import ProgramTest
 
 
+class TestExport(ProgramTest):
+
+    def test_export_with_empty_master_xml(self):
+        """[Regression] Test that export works fine if the master
+        resource is empty."""
+        p = self.setup_project(xml_langs=['de'])
+        p.write_xml(data="""<resources></resources>""", lang='de')
+        p.write_po(Catalog('de'))
+        assert not '[failed]' in p.program('export')
+
+
 class TestImport(ProgramTest):
 
     pass
+
+
+class TestPlurals(ProgramTest):
+    """Test plural support on the program level.
+
+    Low-level plural tests are in convert/
+    """
+
+    def test_init(self):
+        """Test that the init command generates the proper plural form."""
+        p = self.setup_project()
+        p.write_xml(data="""<resources></resources>""")
+        p.write_xml(data="""<resources></resources>""", lang='ja')
+        p.program('init')
+        catalog = p.get_po('ja.po')
+        assert catalog.num_plurals == 1
+        assert catalog.plural_expr == '(0)'
+
+    def test_export(self):
+        """Test that the export command maintains the proper plural form,
+        and actually replaces an incorrect one."""
+        p = self.setup_project()
+        p.write_xml(data="""<resources></resources>""")
+        p.write_xml(data="""<resources></resources>""", lang='ja')
+
+        # Generate a catalog with different plural rules than we expect
+        catalog = Catalog('ja')
+        catalog._num_plurals, catalog._plural_expr = 2, '(n < 2)'
+        p.write_po(catalog)
+
+        # Export should override the info
+        assert 'Plural-Forms header' in p.program('export')
+        catalog = p.get_po('ja.po')
+        assert catalog.num_plurals == 1
+        assert catalog.plural_expr == '(0)'
 
 
 class TestDealWithBrokenInput(ProgramTest):

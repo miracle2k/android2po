@@ -16,12 +16,16 @@ dicts, not filenames or file objects.
 """
 
 from itertools import chain
+from collections import namedtuple
 from compat import OrderedDict
 from lxml import etree
 from babel.messages import Catalog
+from babel import plural
+from babel.plural import _plural_tags as PLURAL_TAGS
 
 
-__all__ = ('xml2po', 'po2xml', 'read_xml', 'InvalidResourceError',)
+__all__ = ('xml2po', 'po2xml', 'read_xml', 'set_catalog_plural_forms',
+           'InvalidResourceError',)
 
 
 class InvalidResourceError(Exception):
@@ -56,22 +60,19 @@ KNOWN_NAMESPACES = {
 # By default, if no warnfunc is passed, this dummy will be used.
 dummy_warn = lambda message, severity=None: None
 
-# The translation class that holds information about the translations
-# themselves.
-# TODO: It might be worth considering whether string-arrays should be
-# implemented as a Translation instance that knows it's an array, rather
-# than a list of Translation objects, as is currently the case; in
-# particular, since comments, as currently implemented, are per
-# string-array anyway, and are just repeated for each item.
-class Translation():
-    text = ""
-    comments = []
-    formatted = False
 
-    def __init__(self, text, comments, formatted):
-        self.text = text
-        self.comments = comments
-        self.formatted = formatted
+# These classes are used for the memory representation of an Android
+# string resource file. ``ResourceTree`` holds ``StringArray``,
+# ``Plurals`` and ``Translation`` objects, and ``StringArray`` and
+# ``Plurals`` can also hold ``Translation`` objects.
+class ResourceTree(OrderedDict):
+    language = None
+    def __init__(self, language=None):
+        OrderedDict.__init__(self)
+        self.language = language
+class StringArray(list): pass
+class Plurals(dict): pass
+Translation = namedtuple('Translation', ['text', 'comments', 'formatted'])
 
 
 def get_element_text(tag, name, warnfunc=dummy_warn):
@@ -331,14 +332,12 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
     return value, formatted
 
 
-def read_xml(file, warnfunc=dummy_warn):
+def read_xml(file, language=None, warnfunc=dummy_warn):
     """Load all resource names from an Android strings.xml resource file.
 
-    The result is a dict of ``name => value``, `with ``value`` being
-    either a string (a single string tag), a list (a string-array tag) or
-    a dict (a plurals tag).
+    The result is a ``ResourceTree`` instance.
     """
-    result = OrderedDict()
+    result = ResourceTree(language)
     comment = []
 
     try:
@@ -378,7 +377,7 @@ def read_xml(file, warnfunc=dummy_warn):
                 result[name] = translation
 
         elif tag.tag == 'string-array':
-            result[name] = list()
+            result[name] = StringArray()
             for child in tag.findall('item'):
                 try:
                     text, formatted = get_element_text(child, name, warnfunc)
@@ -398,18 +397,34 @@ def read_xml(file, warnfunc=dummy_warn):
                     # reference and should be escaped or not. Or, better,
                     # the import process would need to use information from
                     # the default strings.xml file to fill the vacancies.
-                    warnfunc(('Warning: The array "%s" contains that can\'t '+
-                              'be processed (reason: %s) - the array will be '
-                              'incomplete') % (name, e.reason), 'warning')
+                    warnfunc(('Warning: The array "%s" contains items '+
+                              'that can\'t be processed (reason: %s) - '
+                              'the array will be incomplete') %
+                                    (name, e.reason), 'warning')
                 else:
                     translation = Translation(text, comment, formatted)
                     result[name].append(translation)
 
-        # TODO:
-        #elif tag.tag == 'plurals':
-        #    result[name] = dict()
-        #    <for child in tag.find('item'):
-        #        result[name].append(read_value)
+        elif tag.tag == 'plurals':
+            result[name] = Plurals()
+            for child in tag.findall('item'):
+                try:
+                    quantity = child.attrib['quantity']
+                    assert quantity in PLURAL_TAGS
+                except (IndexError, AssertionError):
+                    warnfunc(('"%s" contains a plural with no or '+
+                              'an invalid quantity') % name, 'warning')
+                else:
+                    try:
+                        text, formatted = get_element_text(child, name, warnfunc)
+                    except UnsupportedResourceError, e:
+                        warnfunc(('Warning: The plural "%s:%s" can\'t '+
+                                  'be processed (reason: %s) - '
+                                  'the plural will be incomplete') %
+                                 (name, e.reason), 'warning')
+                    else:
+                        translation = Translation(text, comment, formatted)
+                        result[name][quantity] = translation
 
         # We now have processed a tag. We either added those comments to
         # the translation we created based on the tag, or the comments
@@ -419,18 +434,47 @@ def read_xml(file, warnfunc=dummy_warn):
     return result
 
 
-def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
-    """Return the Android string resource in ``file`` as a babel
-    .po catalog.
+def plural_to_gettext(rule):
+    """This is a copy of the code of ``babel.plural.to_gettext``.
 
-    If given, the Android string resource in ``translations`` will be
-    used for the translated values. In this case, the returned value
-    is a 2-tuple (catalog, unmatched), with the latter being a list of
-    Android string resource names that are in the translated file, but
-    not in the original.
+    We need to use a custom version, because the original only returns
+    a full plural_forms string, which the Babel catalog object does not
+    allow us to assign to anything. Instead, we need the expr and the
+    plural count separately. See http://babel.edgewall.org/ticket/291.
+    """
+    from babel.plural import (PluralRule, _fallback_tag, _plural_tags,
+                              _GettextCompiler)
+    rule = PluralRule.parse(rule)
 
-    Both arguments may also be an already loaded dict of xml strings,
-    as returned by ``read_xml``.
+    used_tags = rule.tags | set([_fallback_tag])
+    _compile = _GettextCompiler().compile
+    _get_index = [tag for tag in _plural_tags if tag in used_tags].index
+
+    expr = ['(']
+    for tag, ast in rule.abstract:
+        expr.append('%s ? %d : ' % (_compile(ast), _get_index(tag)))
+    expr.append('%d)' % _get_index(_fallback_tag))
+    return len(used_tags), ''.join(expr)
+
+
+def set_catalog_plural_forms(catalog, language):
+    """Set the catalog to use the correct plural forms for the
+    language.
+    """
+    catalog._num_plurals, catalog._plural_expr = plural_to_gettext(
+        language.locale.plural_form)
+
+
+def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
+    """Return ``resources`` as a Babel .po ``Catalog`` instance.
+
+    If given, ``translations`` will be used for the translated values.
+    In this case, the returned value is a 2-tuple (catalog, unmatched),
+    with the latter being a list of Android string resource names that
+    are in the translated file, but not in the original.
+
+    Both ``resources`` and ``translations`` must be ``ResourceTree``
+    objects, as returned by ``read_xml()``.
 
     From the application perspective, it will call this function with
     a ``translations`` object when initializing a new .po file based on
@@ -439,41 +483,43 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
     is essentially a POT file (an empty .po file), and this will be
     merged into the existing .po catalogs, as per how gettext usually
     """
-    original_strings = file if isinstance(file, dict) else read_xml(file, warnfunc)
-    trans_strings = None
-    if translations is not None:
-        trans_strings = translations \
-                      if isinstance(translations, dict) \
-                      else read_xml(translations, warnfunc)
+    assert not translations or translations.language
 
     catalog = Catalog()
-    for name, org_value in original_strings.iteritems():
+    if translations is not None:
+        catalog.locale = translations.language.locale
+        # We cannot let Babel determine the plural expr for the locale by
+        # itself. It will use a custom list of plural expressions rather
+        # than generate them based on CLDR.
+        # See http://babel.edgewall.org/ticket/290.
+        set_catalog_plural_forms(catalog, translations.language)
+
+    for name, org_value in resources.iteritems():
         if filter and filter(name):
             continue
 
         trans_value = None
-        if trans_strings:
-            trans_value = trans_strings.pop(name, trans_value)
+        if translations:
+            trans_value = translations.pop(name, trans_value)
 
-        if isinstance(org_value, list):
+        if isinstance(org_value, StringArray):
             # a string-array, write as "name:index"
             if len(org_value) == 0:
                 warnfunc("Warning: string-array '%s' is empty" % name, 'warning')
                 continue
 
-            if trans_value and not isinstance(trans_value, list):
-                warnfunc(('""%s" is a string-array in the reference file, '
-                          'but not in the translation.') % name, 'warning')
-                # makes further processing easier if we can assume
-                # this is a list
-                trans_value = []
-            elif trans_value is None:
-                trans_value = []
+            if not isinstance(trans_value, StringArray):
+                if trans_value:
+                    warnfunc(('""%s" is a string-array in the reference '
+                              'file, but not in the translation.') %
+                                    name, 'warning')
+                trans_value = StringArray()
 
             for index, item in enumerate(org_value):
                 item_trans = trans_value[index].text if index < len(trans_value) else u''
 
-                # If the string has formatting markers, indicate it in the gettext output
+                # If the string has formatting markers, indicate it in
+                # the gettext output
                 flags = []
                 if item.formatted:
                     flags.append('c-format')
@@ -482,21 +528,89 @@ def xml2po(file, translations=None, filter=None, warnfunc=dummy_warn):
                 catalog.add(item.text, item_trans, auto_comments=item.comments,
                             flags=flags, context=ctx)
 
+        elif isinstance(org_value, Plurals):
+            # a plurals, convert to a gettext plurals
+            if len(org_value) == 0:
+                warnfunc("Warning: plurals '%s' is empty" % name, 'warning')
+                continue
+
+            if not isinstance(trans_value, Plurals):
+                if trans_value:
+                    warnfunc(('""%s" is a plurals in the reference '
+                              'file, but not in the translation.') %
+                                    name, 'warning')
+                trans_value = Plurals()
+
+            # Taking the Translation objects for each quantity in ``org_value``,
+            # we build a list of strings, which is how plurals are represented
+            # in Babel.
+            #
+            # Since gettext only allows comments/flags on the whole
+            # thing at once, we merge the comments/flags of all individual
+            # plural strings into one.
+            formatted = False
+            comments = []
+            for _, translation in org_value.items():
+                if translation.formatted:
+                    formatted = True
+                comments.extend(translation.comments)
+
+            # For the message id, choose any two plural forms, but prefer
+            # "one" and "other", assuming an English master resource.
+            temp = org_value.copy()
+            singular =\
+                temp.pop('one') if 'one' in temp else\
+                temp.pop('other') if 'other' in temp else\
+                temp.pop(temp.keys()[0])
+            plural =\
+                temp.pop('other') if 'other' in temp else\
+                temp[temp.keys()[0]] if temp else\
+                singular
+            msgid = (singular.text, plural.text)
+            del temp, singular, plural
+
+            # We pick the quantities supported by the language (the rest
+            # would be ignored by Android as well).
+            msgstr = ''
+            if trans_value:
+                allowed_keywords = translations.language.plural_keywords
+                msgstr = ['' for i in range(len(allowed_keywords))]
+                for quantity, translation in trans_value.items():
+                    try:
+                        index = translations.language.plural_keywords.index(quantity)
+                    except ValueError:
+                        warnfunc(
+                            ('"plurals "%s" uses quantity "%s", which '
+                             'is not supported for this language. See '
+                             'the README for an explanation. The '
+                             'quantity has been ignored') %
+                                    (name, quantity), 'warning')
+                    else:
+                        msgstr[index] = translation.text
+
+            flags = []
+            if formatted:
+                flags.append('c-format')
+            catalog.add(msgid, tuple(msgstr), flags=flags,
+                        auto_comments=comments, context=name)
+
         else:
             # a normal string
-            flags = []
 
-            # If the string has formatting markers, indicate it in the gettext output
+            # If the string has formatting markers, indicate it in
+            # the gettext output
+            # TODO DRY this.
+            flags = []
             if org_value.formatted:
                 flags.append('c-format')
 
             catalog.add(org_value.text, trans_value.text if trans_value else u'',
                         flags=flags, auto_comments=org_value.comments, context=name)
 
-    if trans_strings is not None:
+    if translations is not None:
         # At this point, trans_strings only contains those for which
         # no original existed.
-        return catalog, trans_strings.keys()
+        return catalog, translations.keys()
     else:
         return catalog
 
@@ -622,6 +736,12 @@ def write_to_dom(elem_name, value, message, namespaces=None, warnfunc=dummy_warn
 
     return elem
 
+def sort_plural_keywords(x, y):
+    """Comparator that sorts CLDR  plural keywords starting with 'zero'
+    and ending with 'other'."""
+    return cmp(PLURAL_TAGS.index(x) if x in PLURAL_TAGS else -1,
+               PLURAL_TAGS.index(y) if y in PLURAL_TAGS else -1)
+
 
 def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     """Convert the gettext catalog in ``catalog`` to an XML DOM.
@@ -637,14 +757,33 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     necessary, even).
 
     If ``with_untranslated`` is given, then strings in the catalog
-    that have no translation are written out with the original id. This
-    option does not affect string-arrays, which for technical reasons
-    always must include all elements.
+    that have no translation are written out with the original id,
+    whenever this is safely possible. This does not include string-arrays,
+    which for technical reasons always must include all elements, and it
+    does not include plurals, for which the same is true.
     """
+
+    # Validate that the plurals in the .po catalog match those that
+    # we expect on the Android side per CLDR definition. However, we
+    # only want to trouble the user with this if plurals are actually
+    # used.
+    plural_validation = {'done': False}
+    def validate_plural_config():
+        if plural_validation['done']:
+            return
+        if catalog.num_plurals != len(catalog.language.plural_keywords):
+            warnfunc(('Catalog defines %d plurals, we expect %d for '
+                      'this language. See the README for an '
+                      'explanation. plurals have very likely been '
+                      'incorrectly written.') % (
+                catalog.num_plurals, len(catalog.language.plural_keywords)), 'error')
+            pass
+        plural_validation['done'] = True
+
     # First, process the catalog into a Python sort-of-tree structure.
     # We can't write directly to the XML output, since stuff like
     # string-array items are not guaranteed to appear in the correct
-    # order in the calalog. We "xml tree" pulls these things together.
+    # order in the catalog. We "xml tree" pulls these things together.
     # It is quite similar to the structure returned by read_xml().
     xml_tree = OrderedDict()
     for message in catalog:
@@ -661,16 +800,17 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
         if filter and filter(message):
             continue
 
+        # Both string and id will contain a tuple of this is a plural
         value = message.string or message.id
 
+        # A colon indicates a string array
         if ':' in message.context:
-            # A colon indicates a string array; collect all the
-            # strings of this array with their indices, so when
-            # we're done processing the whole catalog, we can
+            # Collect all the strings of this array with their indices,
+            # so when we're done processing the whole catalog, we can
             # sort by index and restore the proper array order.
             name, index = message.context.split(':', 2)
             index = int(index)
-            xml_tree.setdefault(name, [])
+            xml_tree.setdefault(name, StringArray())
             while index >= len(xml_tree[name]):
                 xml_tree[name].append(None)  # fill None for missing indices
             if xml_tree[name][index] is not None:
@@ -678,6 +818,34 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
                           'the message. The catalog has possibly been '+
                           'corrupted.') % (index, name), 'error')
             xml_tree[name][index] = value
+
+        # A plurals message
+        elif isinstance(message.string, tuple):
+            validate_plural_config()
+
+            # Untranslated: Do not include those even with with_untranslated
+            # is enabled - this is because even if we could put the plural
+            # definition from the master resource here, it wouldn't make
+            # sense in the context of another language. Instead, let access
+            # to the untranslated master version continue to work.
+            if not any(message.string):
+                continue
+
+            # We need to work with ``message.string`` directly rather than
+            # ``value``, since ``message.id`` will only be a 2-tuple made
+            # up of the msgid and msgid_plural definitions.
+            xml_tree[message.context] = Plurals([
+                (k, None) for k in catalog.language.plural_keywords])
+            for index, keyword in enumerate(catalog.language.plural_keywords):
+                # Assume each keyword matches one index.
+                try:
+                    xml_tree[message.context][keyword] = message.string[index]
+                except IndexError:
+                    # Plurals are not matching up, validate_plural_config()
+                    # has already raised a warning.
+                    break
+
+        # A standard string.
         else:
             if not message.string and not with_untranslated:
                 # Untranslated.
@@ -688,7 +856,7 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
     root_tags = []
     namespaces_used = {}
     for name, value in xml_tree.iteritems():
-        if isinstance(value, list):
+        if isinstance(value, StringArray):
             # string-array - first, sort by index
             array_el = etree.Element('string-array')
             array_el.attrib['name'] = name
@@ -696,6 +864,15 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
                 item_el = write_to_dom('item', k, message, namespaces_used, warnfunc)
                 array_el.append(item_el)
             root_tags.append(array_el)
+        elif isinstance(value, Plurals):
+            # plurals
+            plural_el = etree.Element('plurals')
+            plural_el.attrib['name'] = name
+            for k in sorted(value, cmp=sort_plural_keywords):
+                item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
+                item_el.attrib["quantity"] = k
+                plural_el.append(item_el)
+            root_tags.append(plural_el)
         else:
             # standard string
             string_el = write_to_dom('string', value, message, namespaces_used, warnfunc)

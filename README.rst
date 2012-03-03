@@ -214,6 +214,81 @@ an example configuration file in ``example.config`` that you can have a
 look at, or use as a template for your own.
 
 
+Plurals support
+~~~~~~~~~~~~~~~
+
+``<plurals>`` are supported, but merit some additional explanation.
+
+Android's plural support is based on CLDR_ keywords like ``"one"`` and
+``"many"``. The rules specifying which quantity ``n`` maps to which keyword
+are built into Android itself, by way of the CLDR database. It is important to
+understand that a keyword like "one" may be used for quantities other then
+``1``.
+
+In the gettext system, on the other hand, each catalog has the ability to
+define the plural rules it wants to use itself, via an expression like
+``nplurals=2; plural=((n == 1) ? 0 : 1)``. The expression returns the index
+of the string to use for the quantity ``n``.
+
+android2po converts between those two system in the following way:
+
+* When writing .po files, it will generate a plural rule expression like
+  above based on the CLDR data, custom-fit for the language in question.
+  The result is a .po file that defines as many plural forms as required
+  for the language, and your translation tool will ask for a different
+  string for each plural form.
+
+* During import, it will generate a ``<plurals>`` tag with the correct quantity
+  keywords based on it's knowledge (CLDR) about which such keywords the
+  language supports.
+
+* The ``init`` command, having to convert existing ``<plurals>`` tags to
+  gettext, will pick those quantity keywords the language supports, and ignore
+  others (and display a warning in those cases).
+
+* The ``export`` command will ensure that the catalog uses the correct plural
+  definition, but it otherwise does not have to deal with individual plural
+  forms / quantities.
+
+If this is confusing, consider the issue: Android lets you define a number
+of different quantity keywords for each ``<plurals>`` element, but ignores all
+keywords that are not supported by the language (see `this erroneous bug
+report <http://code.google.com/p/android/issues/detail?id=8287>`_).
+gettext only allows you to define a fixed number of plural rules, as many
+as the language purports to require via the catalog's plural rule expression.
+
+To cleanly convert between the two systems, we are forced to ignore keywords
+in an Android XML resource that are really not supported - but only if Android
+itself would also ignore them. So view this as essentially a validation
+feature.
+
+A final note: plurals can be complex (and there are many languages) and the
+CLDR database is regularly updated. In French, whether 0 is treated as plural
+or singular possibly even `depends on the dialect
+<https://developer.mozilla.org/en/Localization_and_Plurals>`_. As
+such, you may find that different plural rules for the same languages are in
+use in the wild. ``android2po`` uses the CLDR rules, but not necessarily the
+same version as Android does, and Android presumably will upgrade their CLDR
+version over time as well. I think the goal here would be to always make
+``android2po`` use a reasonably recent version of the CLDR data, and accept
+that old Android versions with outdated plural information might not be able
+to correctly internationalize some plural strings into into those languages
+where the data is incorrect.
+
+Further reading:
+
+The CLDR plural system and rules
+    http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html
+    http://cldr.unicode.org/index/cldr-spec/plural-rules
+
+Plural information about various languages:
+    http://translate.sourceforge.net/wiki/l10n/pluralforms
+    https://translations.launchpad.net/+languages
+    https://developer.mozilla.org/en/Localization_and_Plurals
+
+.. _CLDR: http://cldr.unicode.org/index/cldr-spec/plural-rules
+
+
 Notes
 -----
 

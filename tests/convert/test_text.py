@@ -20,7 +20,7 @@ from StringIO import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
-from android2po import xml2po, po2xml
+from android2po import xml2po, po2xml, read_xml
 from ..helpers import TestWarnFunc
 
 
@@ -40,11 +40,12 @@ class TestFromXML():
         key = 'test'
         extra = {}
         warnfunc = warnfunc or TestWarnFunc()
-        catalog = xml2po(StringIO(
+        xmltree = read_xml(StringIO(
             '<resources %s><string name="%s">%s</string></resources>' % (
                 " ".join(['xmlns:%s="%s"' % (name, url)
                           for name, url in namespaces.items()]),
                 key, xml)), warnfunc=warnfunc)
+        catalog = xml2po(xmltree, warnfunc=warnfunc)
         match = po if po is not None else xml
         for message in catalog:
             if message.context == key:
@@ -62,10 +63,9 @@ class TestFromXML():
         """
         wfunc = TestWarnFunc()
         key = 'test'
-        catalog = xml2po(
+        catalog = xml2po(read_xml(
             StringIO('<resources><string name="%s">%s</string></resources>' % (
-                key, xml)),
-            warnfunc=wfunc)
+                key, xml)), warnfunc=wfunc))
         assert not catalog.get(xml, context=key)
         for line in wfunc.logs:
             if error_match in line:
