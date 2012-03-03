@@ -124,9 +124,14 @@ class Writer():
 
     # Action types and their default levels
     EVENTS = {
-        'info': 'info', 'mkdir': 'default', 'updated': 'default',
-        'unchanged': 'default', 'skipped': 'warning', 'created': 'default',
-        'exists': 'default', 'failed': 'error',}
+        'info': 'info',
+        'mkdir': 'default',
+        'updated': 'default',
+        'unchanged': 'default',
+        'skipped': 'warning',
+        'created': 'default',
+        'exists': 'default',
+        'failed': 'error',}
 
     # Levels and the minimum verbosity required to show them
     LEVELS = {'default': 2, 'warning': 1, 'error': 0, 'info': 3}
