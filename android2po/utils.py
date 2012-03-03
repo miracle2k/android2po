@@ -161,6 +161,8 @@ class Writer():
             if self in self.writer._pending_actions:
                 self.writer._pending_actions.remove(self)
             self.is_done = True
+            if self.severity == 'error':
+                self.writer.erroneous = True
 
         def update(self, text=None, severity=None, **more_data):
             """Update the message with the given data.
@@ -183,6 +185,8 @@ class Writer():
             By default, all messages use a loglevel of 'info'.
             """
             is_allowed = self.writer.allowed(severity)
+            if severity == 'error':
+                self.writer.erroneous = True
             if not self.is_done:
                 if is_allowed:
                     self.messages.append((message, severity))
@@ -206,6 +210,7 @@ class Writer():
         self._current_action = None
         self._pending_actions = []
         self.verbosity = verbosity
+        self.erroneous = False
 
         # Create a codec writer wrapping stdout
         isatty = sys.stdout.isatty() \

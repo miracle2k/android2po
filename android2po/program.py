@@ -211,12 +211,13 @@ def main(argv):
         env, writer = make_env_and_writer(argv)
         try:
             cmd = COMMANDS[env.options.command](env, writer)
-            return cmd.execute()
+            command_result = cmd.execute()
         finally:
             writer.finish()
+        return 1 if writer.erroneous else 0
     except CommandError, e:
         print 'Error:', e
-        return 1
+        return 2
 
 
 def run():

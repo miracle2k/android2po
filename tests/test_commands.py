@@ -80,12 +80,12 @@ class TestDealWithBrokenInput(ProgramTest):
         c.add('valid_message', 'valid_value', context='valid_message')
         return c
 
-    def runprogram(self, project, command, args={}):
+    def runprogram(self, project, command, args={}, **kw):
         """Helper to run the given command in quiet mode. The warnings
         we test for here should appear even there.
         """
         args['--quiet'] = True
-        return project.program(command, args)
+        return project.program(command, args, **kw)
 
     def test_nocontext(self):
         """Some strings in the .po file do not have a context set.
@@ -94,7 +94,7 @@ class TestDealWithBrokenInput(ProgramTest):
         c = self.mkcatalog()
         c.add('s', 'v',)  # no context!
         p.write_po(c, 'de.po')
-        assert 'no context' in self.runprogram(p, 'import')
+        assert 'no context' in self.runprogram(p, 'import', expect=1)
         assert len(p.get_xml('de')) == 1
 
     def test_duplicate_aray_index(self):
@@ -105,7 +105,7 @@ class TestDealWithBrokenInput(ProgramTest):
         c.add('t1', 'v1', context='myarray:1')
         c.add('t2', 'v2', context='myarray:1')
         p.write_po(c, 'de.po')
-        assert 'Duplicate index' in self.runprogram(p, 'import')
+        assert 'Duplicate index' in self.runprogram(p, 'import', expect=1)
         xml = p.get_xml('de')
         assert len(xml) == 2
         assert len(xml['myarray']) == 1
@@ -157,11 +157,11 @@ class TestDealWithBrokenInput(ProgramTest):
         # Invalid language resource
         p = self.setup_project(xml_langs=['de'])
         p.write_xml(data="""<resources><string name="s1"> ...""", lang='de')
-        assert 'Failed parsing' in self.runprogram(p, 'init')
+        assert 'Failed parsing' in self.runprogram(p, 'init', expect=1)
         assert_raises(IOError, p.get_po, 'de.po')
 
         # Invalid default resource
         p = self.setup_project()
         p.write_xml(data="""<resources><string name="s1"> ...""")
-        assert 'Failed parsing' in self.runprogram(p, 'init')
+        assert 'Failed parsing' in self.runprogram(p, 'init', expect=1)
         assert_raises(IOError, p.get_po, 'template.pot')

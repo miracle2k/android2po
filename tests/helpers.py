@@ -128,7 +128,7 @@ class TempProject(object):
         finally:
             file.close()
 
-    def program(self, command=None, kwargs={}):
+    def program(self, command=None, kwargs={}, expect=None):
         """Run android2po in this project's working directory.
 
         Return the program output.
@@ -177,7 +177,12 @@ class TempProject(object):
                 # argparse likes to raise this if arguments are invalid.
                 raise SystemExitCaught('SystemExit raised by program: %s', e)
             else:
-                if ret:
+                if expect is not None:
+                    if ret != expect:
+                        raise ValueError(
+                            'Program returned code %d, expected %d' % (
+                                ret, expect))
+                elif ret:
                     raise NonZeroReturned('Program returned non-zero: %d', ret)
                 return stdout_capture.getvalue()
         finally:
