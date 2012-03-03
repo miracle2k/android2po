@@ -325,7 +325,8 @@ class TestToXML():
         key = 'test'
         catalog = Catalog()
         catalog.add(po, po, context=key)
-        dom = po2xml(catalog)
+        warnfunc = TestWarnFunc()
+        dom = po2xml(catalog, warnfunc=warnfunc)
         elem = dom.xpath('/resources/string[@name="%s"]' % key)[0]
         elem_as_text = etree.tostring(elem, encoding=unicode)
         value = re.match("^[^>]+>(.*)<[^<]+$", elem_as_text).groups(1)[0]
@@ -339,10 +340,12 @@ class TestToXML():
         for prefix, uri in namespaces.items():
             assert dom.nsmap[prefix] == uri
 
-        # In this case, the reverse (converting back to po) always needs
-        # to give us the original again, so this allows for a nice extra
-        # check.
-        TestFromXML.assert_convert(match, po, namespaces)
+        # In this case, the reverse (converting back to po) always needs to
+        # give us the original again, so this allows for a nice extra check.
+        if not match:    # Skip this if we are doing a special, custom match.
+            TestFromXML.assert_convert(match, po, namespaces)
+
+        return warnfunc
 
     def test_basic(self):
         """Test some basic string variations.
@@ -451,3 +454,8 @@ class TestToXML():
         # Fortunately, the resource files are unicode, so it's ok if we
         # place the actual codepoint there.
         self.assert_convert(u'•', u'•')
+
+    def test_invalid_xhtml(self):
+        """The .po contains invalid XHTML."""
+        wfunc = self.assert_convert('<b>foo</b', xml='<b>foo</b>')
+        assert 'contains invalid XHTML' in wfunc.logs[0]

@@ -615,7 +615,7 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
         return catalog
 
 
-def write_to_dom(elem_name, value, message, namespaces=None, warnfunc=dummy_warn):
+def write_to_dom(elem_name, value, ref, namespaces=None, warnfunc=dummy_warn):
     """Create a DOM object with the tag name ``elem_name``, containing
     the string ``value`` formatted according to Android XML rules.
 
@@ -668,8 +668,8 @@ def write_to_dom(elem_name, value, message, namespaces=None, warnfunc=dummy_warn
         elem = etree.fromstring(value_to_parse)
     except etree.XMLSyntaxError, e:
         elem = etree.fromstring(value_to_parse, loose_parser)
-        warnfunc(('Message %s contains invalid XHTML (%s); Falling back to '
-                  'loose parser.') % (message.context, e), 'warning')
+        warnfunc(('%s contains invalid XHTML (%s); Falling back to '
+                  'loose parser.') % (ref, e), 'warning')
 
     # Within the generated DOM, search for use of one of our supported
     # namespace prefixes, so we can keep track of which namespaces have
@@ -860,8 +860,10 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
             # string-array - first, sort by index
             array_el = etree.Element('string-array')
             array_el.attrib['name'] = name
-            for k in value:
-                item_el = write_to_dom('item', k, message, namespaces_used, warnfunc)
+            for i, v in enumerate(value):
+                item_el = write_to_dom(
+                    'item', v, '"%s" index %d' % (name, i), namespaces_used,
+                    warnfunc)
                 array_el.append(item_el)
             root_tags.append(array_el)
         elif isinstance(value, Plurals):
@@ -869,13 +871,16 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
             plural_el = etree.Element('plurals')
             plural_el.attrib['name'] = name
             for k in sorted(value, cmp=sort_plural_keywords):
-                item_el = write_to_dom('item', value[k], message, namespaces_used, warnfunc)
+                item_el = write_to_dom(
+                    'item', value[k], '"%s" quantity %s' % (name, k),
+                    namespaces_used, warnfunc)
                 item_el.attrib["quantity"] = k
                 plural_el.append(item_el)
             root_tags.append(plural_el)
         else:
             # standard string
-            string_el = write_to_dom('string', value, message, namespaces_used, warnfunc)
+            string_el = write_to_dom(
+                'string', value, '"%s"' % name, namespaces_used, warnfunc)
             string_el.attrib['name'] = name
             root_tags.append(string_el)
 
