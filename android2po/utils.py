@@ -259,7 +259,7 @@ class Writer():
     def _get_style_for_level(self, severity):
         """Return a dict that can be passed as **kwargs to colored().
         """
-        # Other colors that work moderatly well on both dark and
+        # Other colors that work moderately well on both dark and
         # light backgrounds and aren't yet used: cyan, green
         return {
             'default': {'fg': 'blue'},
