@@ -129,8 +129,6 @@ def make_env_and_writer(argv):
     Returns a 2-tuple (``Environment`` instance, ``Writer`` instance).
     """
 
-    env = Environment()
-
     # Parse the command line arguments first. This is helpful in
     # that any potential syntax errors there will cause us to
     # fail before doing anything else.
@@ -144,6 +142,8 @@ def make_env_and_writer(argv):
         writer.verbosity = 1
     else:
         writer.verbosity = 2
+
+    env = Environment(writer)
 
     # Try to load a config file, either if given at the command line,
     # or the one that was automatically found. Note that even if a

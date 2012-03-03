@@ -1,17 +1,15 @@
 from __future__ import absolute_import
 
 import os
-from os import path
 try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
 from lxml import etree
 from babel.messages import pofile, Catalog
-from babel.core import UnknownLocaleError
 
 from . import convert
-from .env import Language
+from .env import resolve_locale
 from .termcolors import colored
 
 
@@ -391,7 +389,10 @@ class InitCommand(Command):
                 if code == '-':
                     # This allows specifying - to only build the template
                     continue
-                yield Language(code, env)
+                language = resolve_locale(code, env)
+                if language:
+                    yield language
+
         else:
             for l in list_languages(source, env, self.w):
                 yield l
@@ -480,34 +481,27 @@ class ExportCommand(InitCommand):
                 # header inside the file at all, and indeed deletes it.
                 # TODO: It deletes all headers it doesn't know, and
                 # overrides others. That sucks.
-                try:
-                    lang_catalog = read_catalog(target_po, locale=language.code)
-                except UnknownLocaleError:
-                    # TODO: Either we should fine a way to not validate that
-                    # any more, or we need to validate earlier. Say, during
-                    # init and during language collection.
-                    action.done('failed', status='%s is not a valid locale' % language.code)
-                else:
-                    catalog, _ = self.make_or_get_template(kind, action)
-                    if catalog is None:
-                        # Something went wrong parsing the catalog
-                        continue
-                    lang_catalog.update(catalog)
+                lang_catalog = read_catalog(target_po, locale=language.code)
+                catalog, _ = self.make_or_get_template(kind, action)
+                if catalog is None:
+                    # Something went wrong parsing the catalog
+                    continue
+                lang_catalog.update(catalog)
 
-                    # Set the correct plural forms.
-                    current_plurals = lang_catalog.plural_forms
-                    convert.set_catalog_plural_forms(lang_catalog, language)
-                    if lang_catalog.plural_forms != current_plurals:
-                        action.message(
-                            'The Plural-Forms header of this catalog '
-                            'has been updated to what android2po '
-                            'requires for plurals support. See the '
-                            'README for more information.', 'warning')
+                # Set the correct plural forms.
+                current_plurals = lang_catalog.plural_forms
+                convert.set_catalog_plural_forms(lang_catalog, language)
+                if lang_catalog.plural_forms != current_plurals:
+                    action.message(
+                        'The Plural-Forms header of this catalog '
+                        'has been updated to what android2po '
+                        'requires for plurals support. See the '
+                        'README for more information.', 'warning')
 
-                    # TODO: Should we include previous?
-                    write_file(self, target_po,
-                               catalog2string(lang_catalog, include_previous=False),
-                               action=action)
+                # TODO: Should we include previous?
+                write_file(self, target_po,
+                           catalog2string(lang_catalog, include_previous=False),
+                           action=action)
 
         if initial_warning:
             print ""

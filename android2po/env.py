@@ -6,13 +6,14 @@ import glob
 from argparse import Namespace
 from os import path
 from babel import Locale
+from babel.core import UnknownLocaleError
 from .config import Config
 from .utils import Path, format_to_re
 from .convert import read_xml, InvalidResourceError
 
 
 __all__ = ('EnvironmentError', 'IncompleteEnvironment',
-           'Environment', 'Language',)
+           'Environment', 'Language', 'resolve_locale')
 
 
 class EnvironmentError(Exception):
@@ -81,6 +82,17 @@ class DefaultLanguage(Language):
             'domain': self.env.config.domain or 'android',
         }
         return self.env.path(self.env.gettext_dir, filename)
+
+
+def resolve_locale(code, env):
+    """Return a ``Language`` instance for a locale code.
+
+    Deals with incorrect values."""
+    try:
+        return Language(code, env)
+    except UnknownLocaleError:
+        env.w.action('failed', '%s is not a valid locale' % code)
+
 
 
 def find_project_dir_and_config():
@@ -190,7 +202,8 @@ class Environment(object):
         env.init()
     """
 
-    def __init__(self):
+    def __init__(self, writer):
+        self.w = writer
         self.xmlfiles = []
         self.default = DefaultLanguage(self)
         self.config = Config()
@@ -402,7 +415,6 @@ class Environment(object):
                                            ", ".join(self.xmlfiles)))
         self.config.template_name = template
 
-
     LANG_DIR = re.compile(r'^values-(\w\w)(?:-r(\w\w))?$')
     def get_android_languages(self):
         """Finds the languages that already exist inside the Android
@@ -415,12 +427,13 @@ class Environment(object):
             match = self.LANG_DIR.match(name)
             if not match:
                 continue
-            filepath = path.join(self.resource_dir, name)
             country, region = match.groups()
             code = "%s" % country
             if region:
                 code += "_%s" % region
-            languages.append(Language(code, self))
+            language = resolve_locale(code, self)
+            if language:
+                languages.append(language)
         return languages
 
     def get_gettext_languages(self):
@@ -469,7 +482,9 @@ class Environment(object):
                     continue
                 code = m.groupdict()['locale']
                 if not code in languages:
-                    languages[code] = Language(code, self)
+                    language = resolve_locale(code, self)
+                    if language:
+                        languages[code] = language
 
             return languages.values()
         finally:
