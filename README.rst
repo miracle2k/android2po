@@ -289,6 +289,35 @@ Plural information about various languages:
 .. _CLDR: http://cldr.unicode.org/index/cldr-spec/plural-rules
 
 
+
+Understanding / Debugging the android2po
+----------------------------------------
+
+If something doesn't work as expected, it may be helpful to understand
+which files are processed how and when:
+
+On ``init``, ``android2po`` will take your language-neutral (English)
+``values/strings.xml`` file and convert it to a .pot template.
+
+Further on ``init``, if there are existing ``values-{lang}/strings.xml`` files,
+it will take the strings from there, match them with the strings in the
+language-neutral ``values/strings.xml`` file, and generate .po files for these
+languages which already contain translations, in addition to the template.
+This is the **only** time that the ``values-{lang}/strings.xml`` files will
+be looked at and considered.
+
+On ``export``, ``android2po`` will take the language-neutral
+``values/strings.xml`` file, generate a new .pot template, and then merge the
+new template into any existing .po catalogs, i.e. update the .po catalogs for
+each language with the changes. This is how gettext normally works
+(``msgmerge``). The ``values-{lang}/strings.xml`` files do not play a role here.
+
+On 'import', ``android2po`` will only look at the .po catalogs for each
+language and generate ``values-{lang}/strings.xml`` files, without looking at
+anything else.
+
+
+
 Notes
 -----
 
