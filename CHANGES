@@ -1,4 +1,5 @@
-1.x.x
+1.2.0 (2012-03-18)
+    - Support for plurals.
     - Existing languages are now determined based on gettext catalogs,
       this makes it possible to not put the values-xx/ directories under
       source control.
@@ -8,10 +9,12 @@
       result, string resources that use the @-reference syntax are no
       longer exported at all.
     - Strings marked translatable=false are now ignored (by Kenny Root).
-    - Comments in resource files are now processed and included in the 
+    - Comments in resource files are now processed and included in the
       gettext catalogs (by Kenny Root).
-    - Format strings are now properly flagged; this can be used for 
+    - Format strings are now properly flagged; this can be used for
       validation of the translated string (by Kenny Root).
+    - Better handling of arrays, correctly deal with long arrays.
+    - A variety of other small improvements and bug fixes.
 
 1.1.0 (2010-04-07)
     - Fixed edge cases in which non-significant newlines/tabs could
