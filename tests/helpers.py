@@ -41,6 +41,7 @@ class TestWarnFunc(object):
     def __init__(self):
         self.logs = []
     def __call__(self, msg, severity):
+        print msg
         self.logs.append(msg)
 
 
