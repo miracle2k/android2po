@@ -137,7 +137,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                     # Replace by a single space, will get rid of
                     # non-significant newlines/tabs etc.
                     text[i-space_count : i] = ' '
-                    i -= space_count + 1
+                    i -= space_count - 1
                 space_count = 0
             elif space_count == 1:
                 # At this point we have a single whitespace character,

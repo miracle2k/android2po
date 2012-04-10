@@ -132,7 +132,6 @@ class TestFromXML():
                             'Shortcut <my:g xmlns:my="urn:custom">%s</my:g> already exists',
                             namespaces={'my': 'urn:custom'})
 
-
     def test_whitespace(self):
         """Test various whitespace handling scenarios.
         """
@@ -307,6 +306,15 @@ class TestFromXML():
         whitespace collapsing, but (4) doesn't fit into this explanation.
         """
         pass
+
+    def test_whitespace_collapsing(self):
+        """[Regression] There used to be a bug with whitespace collapsing
+        deleting to many characters, in such a way that it only  became
+        apparent  when escape sequences became involved that could then
+        subsequently not be treated properly.
+        """
+        self.assert_convert('''a    \\n''', 'a \n')
+        self.assert_convert('''\\n \\n''', '\n \n')
 
 
 class TestToXML():
