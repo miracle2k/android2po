@@ -413,7 +413,7 @@ def read_xml(file, language=None, warnfunc=dummy_warn):
                     try:
                         text, formatted = get_element_text(child, name, warnfunc)
                     except UnsupportedResourceError, e:
-                        warnfunc(('Warning: The plural "%s:%s" can\'t '+
+                        warnfunc(('Warning: The plural "%s" can\'t '+
                                   'be processed (reason: %s) - '
                                   'the plural will be incomplete') %
                                  (name, e.reason), 'warning')
