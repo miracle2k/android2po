@@ -456,8 +456,14 @@ def set_catalog_plural_forms(catalog, language):
     """Set the catalog to use the correct plural forms for the
     language.
     """
-    catalog._num_plurals, catalog._plural_expr = plural_to_gettext(
-        language.locale.plural_form)
+    try:
+        catalog._num_plurals, catalog._plural_expr = plural_to_gettext(
+            language.locale.plural_form)
+    except KeyError:
+        # Babel/CDLR seems to be lacking this data sometimes, for
+        # example for "uk"; fortunately, ignoring this is narrowly
+        # acceptable.
+        pass
 
 
 def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
