@@ -1,7 +1,7 @@
 # Install using pip install -r requirements.pip
 
 lxml
-argparse==1.1
+argparse
 
 # This is a custom build of th dev version that has context support
 http://elsdoerfer.name/download/android2po/files/Babel-1.0dev.tar.gz
