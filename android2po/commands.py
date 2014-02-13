@@ -488,6 +488,17 @@ class ExportCommand(InitCommand):
                     continue
                 lang_catalog.update(catalog)
 
+                # Making monkey patching: getting values from obsolete values and
+                # setting them as the new ones while marking message fuzzy
+                for message in lang_catalog:
+                    for key in lang_catalog.obsolete:
+                        if message.context == key[1]:
+                            obsolete_message = lang_catalog.obsolete[key]
+                            message.string = obsolete_message.string
+                            message.flags.add('fuzzy')
+                # Clearing obsolete messages
+                lang_catalog.obsolete.clear()
+
                 # Set the correct plural forms.
                 current_plurals = lang_catalog.plural_forms
                 convert.set_catalog_plural_forms(lang_catalog, language)
