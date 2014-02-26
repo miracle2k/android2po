@@ -1,8 +1,9 @@
 """Android supports plurals. Make sure we can handle them properly.
 """
 
+from __future__ import unicode_literals
+
 from StringIO import StringIO
-from lxml import etree
 from babel.messages.catalog import Catalog
 from android2po import xml2po, po2xml, read_xml
 from android2po.env import Language
@@ -67,11 +68,12 @@ def test_read_language_xml():
     assert [m.id for m in catalog if m.id] == [('one', 'other')]
     # Note: Romanian does not use the "many" string, so it is not included.
     assert [m.string for m in catalog if m.id] == [
-        ('ro one', 'ro few', 'ro other')]
+        ('ro few', 'ro one', 'ro other')]
 
     # Make sure the catalog has the proper header
     assert catalog.num_plurals == 3
-    assert catalog.plural_expr == '((n == 1) ? 0 : ((n == 0) || ((n != 1) && ((n % 100) >= 1 && (n % 100) <= 19))) ? 1 : 2)'
+    print(catalog.plural_expr)
+    assert catalog.plural_expr == '(((n == 0) || ((n != 1) && (((n % 100) >= 1 && (n % 100) <= 19)))) ? 1 : (n == 1) ? 0 : 2)'
 
 
 def test_write():
@@ -81,18 +83,19 @@ def test_write():
     """
     catalog = Catalog()
     catalog.language = Language('bs') # Bosnian
-    catalog.add(('foo', 'foos'), ('one', 'few', 'many', 'other'), context='foo')
+    catalog.add(('foo', 'foos'), ('few', 'many', 'one', 'other'), context='foo')
     assert po2xml(catalog) == {'foo': {
-        'few': 'few', 'many': 'many', 'other': 'other', 'one': 'one'}}
+        'few': 'few', 'many': 'many', 'one': 'one', 'other': 'other'}}
 
 
 def test_write_incomplete_plural():
     """Test behaviour with incompletely translated plurals in .po."""
     catalog = Catalog()
     catalog.language = Language('bs') # Bosnian
-    catalog.add(('foo', 'foos'), ('one', '', 'many', ''), context='foo')
+    catalog.add(('foo', 'foos'), ('', 'many', 'one', ''), context='foo')
+    print(po2xml(catalog))
     assert po2xml(catalog) == {'foo': {
-        'few': '', 'many': 'many', 'other': '', 'one': 'one'}}
+        'few': '', 'many': 'many', 'one': 'one', 'other': ''}}
 
 
 def test_write_incorrect_plural():
@@ -113,7 +116,7 @@ def test_write_incorrect_plural():
     assert '2 plurals, we expect 3' in wfunc.logs[0]
 
     # The missing plural is empty
-    assert xml == {'foo': {'few': 'b', 'other': None, 'one': 'a'}}
+    assert xml == {'foo': {'few': 'a', 'other': None, 'one': 'b'}}
 
 
 def test_write_ignore_untranslated_plural():

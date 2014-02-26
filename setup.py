@@ -45,7 +45,7 @@ setup(name='android2po',
       license='BSD',
       packages=['android2po'],
       package_dir = {'android2po': 'android2po'},
-      install_requires = ['lxml', 'argparse', 'babel==1.0dev'],
+      install_requires = ['lxml', 'argparse', 'babel'],
       dependency_links = [
           "http://elsdoerfer.name/download/android2po/files/Babel-1.0dev.tar.gz"
       ],
