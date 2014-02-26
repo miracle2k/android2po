@@ -3,7 +3,7 @@
 """Adapted from virtualenv's setup.py
 """
 
-import sys, os
+import os
 try:
     from setuptools import setup
     kw = {'entry_points':
@@ -46,8 +46,5 @@ setup(name='android2po',
       packages=['android2po'],
       package_dir = {'android2po': 'android2po'},
       install_requires = ['lxml', 'argparse', 'babel'],
-      dependency_links = [
-          "http://elsdoerfer.name/download/android2po/files/Babel-1.0dev.tar.gz"
-      ],
       **kw
       )
