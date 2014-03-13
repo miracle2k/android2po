@@ -24,6 +24,28 @@ class IncompleteEnvironment(EnvironmentError):
     pass
 
 
+ANDROID_LOCALE_MAPPING = {
+    'from': {
+        'zh_CN': 'zh_Hans_CN',
+        'zh_HK': 'zh_Hant_HK',
+        'zh_TW': 'zh_Hant_TW'
+    },
+    'to': {
+        'zh_Hans_CN': 'zh_CN',
+        'zh_Hant_HK': 'zh_HK',
+        'zh_Hant_TW': 'zh_TW'
+    }
+}
+"""
+Android uses locale scheme that differs from one used inside Babel,
+so we must provide a mapping between one another. This list is not
+full and must be updated to include all such mappings.
+
+We can not simply ignore middle element in transition from android
+to Babel locale mapping.
+"""
+
+
 class Language(object):
     """Represents a single language.
     """
@@ -38,7 +60,11 @@ class Language(object):
 
     def xml(self, kind):
         # Android uses a special language code format for the region part
-        parts = tuple(self.code.split('_', 2))
+        if self.code in ANDROID_LOCALE_MAPPING['to']:
+            code = ANDROID_LOCALE_MAPPING['to'][self.code]
+        else:
+            code = self.code
+        parts = tuple(code.split('_', 2))
         if len(parts) == 2:
             android_code = "%s-r%s" % parts
         else:
@@ -87,12 +113,11 @@ class DefaultLanguage(Language):
 def resolve_locale(code, env):
     """Return a ``Language`` instance for a locale code.
 
-    Deals with incorrect values."""
+    Deals with incorrect Babel locale values."""
     try:
         return Language(code, env)
     except UnknownLocaleError:
         env.w.action('failed', '%s is not a valid locale' % code)
-
 
 
 def find_project_dir_and_config():
@@ -416,6 +441,7 @@ class Environment(object):
         self.config.template_name = template
 
     LANG_DIR = re.compile(r'^values-(\w\w)(?:-r(\w\w))?$')
+
     def get_android_languages(self):
         """Finds the languages that already exist inside the Android
         resource directory.
@@ -428,9 +454,13 @@ class Environment(object):
             if not match:
                 continue
             country, region = match.groups()
-            code = "%s" % country
+            pseudo_code = "%s" % country
             if region:
-                code += "_%s" % region
+                pseudo_code += "_%s" % region
+            if pseudo_code in ANDROID_LOCALE_MAPPING['from']:
+                code = ANDROID_LOCALE_MAPPING['from'][pseudo_code]
+            else:
+                code = pseudo_code
             language = resolve_locale(code, self)
             if language:
                 languages.append(language)
