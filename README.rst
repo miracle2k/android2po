@@ -14,11 +14,11 @@ readable as well (i.e. no unnecessary escaping).
 Requirements
 ------------
 
-The following Python modules are required, but will mostly be
+The following Python modules are required, and will mostly be
 auto-installed. See ``Installation`` below.
 
-babel >= 1.0dev (only the dev version has support for contexts)
-    http://babel.edgewall.org/
+babel
+    http://babel.pocoo.org/
 
 lxml
     http://codespeak.net/lxml/
@@ -48,14 +48,6 @@ If you want to install the current development version of
 Alternatively, you can also use pip if you prefer:
 
     $ pip install -r requirements.pip
-
-Note: The development version of Babel is required, which isn't 
-straighforward to install, so both the ``setup.py`` file and the 
-``requirements.pip`` file link to a custom distribution I made for 
-android2po. If you prefer to install the babel SVN version
-yourself, you need to follow the instructions on this page:
-
-    http://babel.edgewall.org/wiki/SubversionCheckout
 
 Usage
 ~~~~~
