@@ -492,6 +492,8 @@ class ExportCommand(InitCommand):
                 # setting them as the new ones while marking message fuzzy
                 for message in lang_catalog:
                     for key in lang_catalog.obsolete:
+                        if key == "":
+                            continue
                         if message.context == key[1]:
                             obsolete_message = lang_catalog.obsolete[key]
                             message.string = obsolete_message.string
