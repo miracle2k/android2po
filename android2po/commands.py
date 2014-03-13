@@ -486,7 +486,8 @@ class ExportCommand(InitCommand):
                 if catalog is None:
                     # Something went wrong parsing the catalog
                     continue
-                lang_catalog.update(catalog)
+                lang_catalog.update(catalog,
+                                    no_fuzzy_matching=not env.config.enable_fuzzy_matching)
 
                 # Making monkey patching: getting values from obsolete values and
                 # setting them as the new ones while marking message fuzzy
@@ -499,7 +500,8 @@ class ExportCommand(InitCommand):
                             message.string = obsolete_message.string
                             message.flags.add('fuzzy')
                 # Clearing obsolete messages
-                lang_catalog.obsolete.clear()
+                if env.config.clear_obsolete:
+                    lang_catalog.obsolete.clear()
 
                 # Set the correct plural forms.
                 current_plurals = lang_catalog.plural_forms
