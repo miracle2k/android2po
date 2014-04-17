@@ -568,6 +568,7 @@ class ImportCommand(Command):
         # were skipped.
         for kind in self.env.xmlfiles:
             language_xml = language.xml(kind)
+            language_po = language.po(kind)
             action = self.w.begin(language_xml)
 
             if skip_due_to_incomplete:
