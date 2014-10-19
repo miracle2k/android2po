@@ -2,6 +2,4 @@
 
 lxml
 argparse==1.1
-
-# This is a custom build of th dev version that has context support
-http://elsdoerfer.name/download/android2po/files/Babel-1.0dev.tar.gz
+babel >= 1.0
