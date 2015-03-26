@@ -53,7 +53,7 @@ class Language(object):
     def __init__(self, code, env=None):
         self.code = code
         self.env = env
-        self.locale = Locale(code) if code else None
+        self.locale = Locale.parse(code) if code else None
 
     def __unicode__(self):
         return unicode(self.code)
