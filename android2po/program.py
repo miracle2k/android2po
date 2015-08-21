@@ -2,6 +2,7 @@
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import sys
 from os import path
@@ -57,7 +58,7 @@ def parse_args(argv):
     subparsers = parser.add_subparsers(dest="command", title='commands',
                                        description='valid commands',
                                        help='additional help')
-    for name, cmdclass in COMMANDS.items():
+    for name, cmdclass in list(COMMANDS.items()):
         cmd_parser = subparsers.add_parser(name, parents=[base_parser], add_help=True)
         group = cmd_parser.add_argument_group('command arguments')
         cmdclass.setup_arg_parser(group)
@@ -97,10 +98,10 @@ def read_config(file):
             f.close()
 
     args = filter(lambda x: bool(x),     # get rid of '' elements
-                  map(str.strip,         # get rid of surrounding whitespace
+                  [i.strip() for i in    # get rid of surrounding whitespace
                       " ".join(filter(lambda x: not x.strip().startswith('#'),
                                       lines)
-                      ).split(" ")))
+                              ).split(" ")])
 
     # Use a parser that specifically only supports those options that
     # we want to support within a config file (as opposed to all the
@@ -190,7 +191,7 @@ def make_env_and_writer(argv):
                 raise CommandError('Your configuration file does not specify '
                     'the source and target directory, and you are not running '
                     'the script from inside an Android project directory.')
-    except EnvironmentError, e:
+    except EnvironmentError as e:
         raise CommandError(e)
 
     # We're done. Just print some info out for the user.
@@ -215,8 +216,8 @@ def main(argv):
         finally:
             writer.finish()
         return 1 if writer.erroneous else 0
-    except CommandError, e:
-        print 'Error:', e
+    except CommandError as e:
+        print('Error:', e)
         return 2
 
 

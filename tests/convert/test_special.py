@@ -2,8 +2,9 @@
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from StringIO import StringIO
+from io import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises

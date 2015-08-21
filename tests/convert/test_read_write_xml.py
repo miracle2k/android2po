@@ -10,7 +10,7 @@ from android2po.convert import write_xml, Plurals, StringArray
 
 
 def c(dom):
-    print etree.tostring(write_xml(dom))
+    print(etree.tostring(write_xml(dom)))
     return etree.tostring(write_xml(dom))
 
 

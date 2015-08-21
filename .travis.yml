@@ -3,6 +3,9 @@ cache: pip
 sudo: false
 python:
   - "2.7"
+  - "3.3"
+  - "3.4"
+  - "pypy"
 # command to install dependencies
 install: "pip install -r requirements.pip"
 # command to run tests

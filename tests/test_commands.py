@@ -12,7 +12,7 @@ right thing.
 from nose.tools import assert_raises
 from babel.messages import Catalog
 from android2po.convert import StringArray
-from helpers import ProgramTest
+from .helpers import ProgramTest
 
 
 class TestExport(ProgramTest):

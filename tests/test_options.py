@@ -103,7 +103,7 @@ class TestIgnores(ProgramTest):
         p = self.setup_project(default_xml={'app_name': 'Foo', 'nomatch': 'bar'})
         p.program('init', {'de': '', '--ignore': 'app_name'})
         po = p.get_po('de.po')
-        assert po._messages.values()[0].id == 'bar'   # at least once bother to check the actual content
+        assert list(po._messages.values())[0].id == 'bar'   # at least once bother to check the actual content
         assert len(p.get_po('template.pot')) == 1
 
     def test_export(self):

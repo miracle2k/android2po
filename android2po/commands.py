@@ -1,10 +1,11 @@
 from __future__ import absolute_import
 
 import os
+import collections
 try:
-    import cStringIO as StringIO
+    import cStringIO as io
 except ImportError:
-    import StringIO
+    import io
 from lxml import etree
 from babel.messages import pofile, Catalog
 
@@ -35,7 +36,7 @@ def catalog2string(catalog, **kwargs):
 
     This is a simple shortcut around pofile.write_po().
     """
-    sf = StringIO.StringIO()
+    sf = io.StringIO()
     pofile.write_po(sf, catalog, **kwargs)
     return sf.getvalue()
 
@@ -60,7 +61,7 @@ def read_xml(action, filename, **kw):
     """
     try:
         return convert.read_xml(filename, warnfunc=action.message, **kw)
-    except convert.InvalidResourceError, e:
+    except convert.InvalidResourceError as e:
         action.done('failed')
         action.message('Failed parsing "%s": %s' % (filename.rel, e), 'error')
         return False
@@ -74,7 +75,7 @@ def xml2po(env, action, *a, **kw):
         for filter in env.config.ignores:
             if filter.match(name):
                 return True
-    kw['filter'] = xml_filter
+    kw['resfilter'] = xml_filter
     if action:
         kw['warnfunc'] = action.message
     return convert.xml2po(*a, **kw)
@@ -87,7 +88,7 @@ def po2xml(env, action, *a, **kw):
     def po_filter(message):
         if env.config.ignore_fuzzy and message.fuzzy:
             return True
-    kw['filter'] = po_filter
+    kw['resfilter'] = po_filter
     kw['warnfunc'] = action.message
     return convert.po2xml(*a, **kw)
 
@@ -113,7 +114,7 @@ def list_languages(source, env, writer):
     assert source in ('gettext', 'android')
     languages = getattr(env,
         'get_gettext_languages' if source=='gettext' else 'get_android_languages')()
-    lstr = ", ".join(map(unicode, languages))
+    lstr = ", ".join(map(str, languages))
     writer.action('info',
                   "Found %d language(s): %s" % (len(languages), lstr))
     writer.message('List of languages was based on %s' % (
@@ -178,7 +179,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     f = open(filename, 'wb')
     try:
-        if callable(content):
+        if isinstance(content, collections.Callable):
             content = content()
         f.write(content)
         f.flush()
@@ -519,11 +520,11 @@ class ExportCommand(InitCommand):
                            action=action)
 
         if initial_warning:
-            print ""
-            print colored("Warning: One or more .po files were skipped "+\
+            print("")
+            print(colored("Warning: One or more .po files were skipped "+\
                   "because they did not exist yet. Use the 'init' command "+\
                   "to generate them for the first time.",
-                  fg='magenta', opts=('bold',))
+                  fg='magenta', opts=('bold',)))
 
 
 class ImportCommand(Command):

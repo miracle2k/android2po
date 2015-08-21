@@ -1,9 +1,9 @@
 import os, sys
 from os.path import join, dirname, exists
 try:
-    import cStringIO as StringIO
+    import cStringIO as io
 except ImportError:
-    import StringIO
+    import io
 import tempfile
 import shutil
 from lxml import etree
@@ -41,7 +41,7 @@ class TestWarnFunc(object):
     def __init__(self):
         self.logs = []
     def __call__(self, msg, severity):
-        print msg
+        print(msg)
         self.logs.append(msg)
 
 
@@ -103,7 +103,7 @@ class TempProject(object):
         mkfile(self.p('.android2po'), config)
 
     def write_xml(self, data={}, lang=None, kind='strings'):
-        if isinstance(data, basestring):
+        if isinstance(data, str):
             content = data
         else:
             content = etree.tostring(write_xml(data))
@@ -133,7 +133,7 @@ class TempProject(object):
         args = ['a2po-test']
         if command:
             args.append(command)
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             if v is True or not v:
                 args.append(k)
             else:
@@ -154,13 +154,16 @@ class TempProject(object):
                         # will not capture more than the value "w".
                         args.append("%s=%s" % (k, w))
 
-        old_cwd = os.getcwd()
+        try:
+            old_cwd = os.getcwd()
+        except OSError as exc:
+            old_cwd = None
         os.chdir(self.dir)
         # Sometimes we might want to check a certain message was printed
         # out, so in addition to having nose capture the output, we
         # want to as well.
         old_stdout = sys.stdout
-        stdout_capture = StringIO.StringIO()
+        stdout_capture = io.StringIO()
         sys.stdout = Tee(sys.stdout, stdout_capture)
         # argparse likes to write to stderr, let it be handled like
         # normal stdout (i.e. captured by nose as well as us).
@@ -168,9 +171,9 @@ class TempProject(object):
         sys.stderr = sys.stdout
         try:
             try:
-                print "Running: %s" % " ".join(args)
+                print("Running: %s" % " ".join(args))
                 ret = a2po.main(args)
-            except SystemExit, e:
+            except SystemExit as e:
                 # argparse likes to raise this if arguments are invalid.
                 raise SystemExitCaught('SystemExit raised by program: %s', e)
             else:
@@ -183,7 +186,8 @@ class TempProject(object):
                     raise NonZeroReturned('Program returned non-zero: %d', ret)
                 return stdout_capture.getvalue()
         finally:
-            os.chdir(old_cwd)
+            if old_cwd is not None:
+                os.chdir(old_cwd)
             sys.stdout = old_stdout
             sys.stderr = old_stderr
 
