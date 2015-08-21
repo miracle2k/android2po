@@ -54,7 +54,10 @@ class Tee(object):
 
     def write(self, data):
         for f in self.args:
-            f.write(data)
+            if type(data) == str:
+                f.write(data)
+            else:
+                f.write(data.decode('UTF-8'))
 
 
 class TempProject(object):
@@ -106,7 +109,7 @@ class TempProject(object):
         if isinstance(data, str):
             content = data
         else:
-            content = etree.tostring(write_xml(data))
+            content = etree.tostring(write_xml(data)).decode('utf-8')
 
         folder = 'values'
         if lang:
@@ -198,15 +201,12 @@ class TempProject(object):
         finally:
             file.close()
 
-    def get_xml(self, lang=None, kind='strings', raw=False):
+    def get_xml(self, lang=None, kind='strings'):
         dirname = 'values'
         if lang:
             dirname = "%s-%s" % (dirname, lang)
         filename = self.p(self.resource_dir, dirname, '%s.xml' % kind)
-        if raw:
-            return open(filename).read()
-        else:
-            return read_xml(filename)
+        return read_xml(filename)
 
 
 class ProgramTest(object):

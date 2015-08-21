@@ -329,7 +329,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
     return value, formatted
 
 
-def read_xml(file, language=None, warnfunc=dummy_warn):
+def read_xml(xml_file, language=None, warnfunc=dummy_warn):
     """Load all resource names from an Android strings.xml resource file.
 
     The result is a ``ResourceTree`` instance.
@@ -338,7 +338,7 @@ def read_xml(file, language=None, warnfunc=dummy_warn):
     comment = []
 
     try:
-        doc = etree.parse(file)
+        doc = etree.parse(xml_file)
     except etree.XMLSyntaxError as e:
         raise InvalidResourceError(e)
 
@@ -739,11 +739,10 @@ def write_to_dom(elem_name, value, ref, namespaces=None, warnfunc=dummy_warn):
 
     return elem
 
-def sort_plural_keywords(x, y):
-    """Comparator that sorts CLDR  plural keywords starting with 'zero'
+def key_plural_keywords(x):
+    """Extracts CLDR plural keywords index starting with 'zero'
     and ending with 'other'."""
-    return cmp(PLURAL_TAGS.index(x) if x in PLURAL_TAGS else -1,
-               PLURAL_TAGS.index(y) if y in PLURAL_TAGS else -1)
+    return PLURAL_TAGS.index(x) if x in PLURAL_TAGS else -1
 
 
 def po2xml(catalog, with_untranslated=False, resfilter=None, warnfunc=dummy_warn):
@@ -876,7 +875,7 @@ def write_xml(tree, warnfunc=dummy_warn):
             # plurals
             plural_el = etree.Element('plurals')
             plural_el.attrib['name'] = name
-            for k in sorted(value, cmp=sort_plural_keywords):
+            for k in sorted(value, key=key_plural_keywords):
                 item_el = write_to_dom(
                     'item', value[k], '"%s" quantity %s' % (name, k),
                     namespaces_used, warnfunc)

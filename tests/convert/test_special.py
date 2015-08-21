@@ -101,7 +101,7 @@ def test_invalid_xhtml():
     dom = write_xml(po2xml(c))
 
     # The tag was closed automatically (our loose parser tries to fix errors).
-    assert etree.tostring(dom) == '<resources><string name="foo"><i>Tag is not closed</i></string></resources>'
+    assert etree.tostring(dom) == b'<resources><string name="foo"><i>Tag is not closed</i></string></resources>'
 
 
 def test_untranslated():

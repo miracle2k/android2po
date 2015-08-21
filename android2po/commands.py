@@ -24,11 +24,11 @@ class CommandError(Exception):
 def read_catalog(filename, **kwargs):
     """Helper to read a catalog from a .po file.
     """
-    file = open(filename, 'rb')
+    f = open(filename, 'r')
     try:
-        return pofile.read_po(file, **kwargs)
+        return pofile.read_po(f, **kwargs)
     finally:
-        file.close()
+        f.close()
 
 
 def catalog2string(catalog, **kwargs):
@@ -36,9 +36,9 @@ def catalog2string(catalog, **kwargs):
 
     This is a simple shortcut around pofile.write_po().
     """
-    sf = io.StringIO()
+    sf = io.BytesIO()
     pofile.write_po(sf, catalog, **kwargs)
-    return sf.getvalue()
+    return sf.getvalue().decode('utf-8')
 
 
 def xml2string(tree, action):
@@ -50,7 +50,7 @@ def xml2string(tree, action):
     ENCODING = 'utf-8'
     dom = convert.write_xml(tree, warnfunc=action.message)
     return etree.tostring(dom, xml_declaration=True,
-                          encoding=ENCODING, pretty_print=True)
+                          encoding=ENCODING, pretty_print=True).decode('utf-8')
 
 
 def read_xml(action, filename, **kw):
@@ -177,7 +177,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     ensure_directories(cmd, filename.dir)
 
-    f = open(filename, 'wb')
+    f = open(filename, 'w')
     try:
         if isinstance(content, collections.Callable):
             content = content()
