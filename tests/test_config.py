@@ -37,8 +37,14 @@ def test_whitespace():
 def test_path_rebase():
     """Paths in the config file are made relative to their location.
     """
-    file = StringIO('''--gettext ../gettext\n--android ../res''')
-    file.name = '/opt/proj/android/shared/.config'
+    # In Python 2.6, you can't set StringIO object's name attribute, so this
+    # allows us to mock an opened file in 2.6+.
+    class MockFile(StringIO):
+        name = None
+        def __init__(self, name, buffer_=None):
+            super(MockFile, self).__init__(buffer_)
+            self.name = name
+    file = MockFile('/opt/proj/android/shared/.config', '''--gettext ../gettext\n--android ../res''')
     c = read_config(file)
     print(c.gettext_dir)
     assert c.gettext_dir == '/opt/proj/android/gettext'
