@@ -25,6 +25,11 @@ class TestExport(ProgramTest):
         p.write_po(Catalog('de'))
         assert not '[failed]' in p.program('export')
 
+    def test_export_with_non_existent_po(self):
+        p = self.setup_project()
+        p.write_xml(data="""<resources></resources>""", lang='de')
+        assert '[skipped]' in p.program('export', {'de': ''})
+
 
 class TestImport(ProgramTest):
 
