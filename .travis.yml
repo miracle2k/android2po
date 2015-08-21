@@ -13,6 +13,7 @@ env:
 - TOXENV=py33
 - TOXENV=py34
 - TOXENV=pypy
+- TOXENV=cover
 
 install:
 - pip install tox
