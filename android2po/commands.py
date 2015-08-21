@@ -3,9 +3,9 @@ from __future__ import absolute_import
 import os
 import collections
 try:
-    import cStringIO as io
+    from cStringIO import StringIO as BytesIO
 except ImportError:
-    import io
+    from io import BytesIO
 from lxml import etree
 from babel.messages import pofile, Catalog
 
@@ -36,7 +36,7 @@ def catalog2string(catalog, **kwargs):
 
     This is a simple shortcut around pofile.write_po().
     """
-    sf = io.BytesIO()
+    sf = BytesIO()
     pofile.write_po(sf, catalog, **kwargs)
     return sf.getvalue().decode('utf-8')
 
