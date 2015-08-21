@@ -1,6 +1,6 @@
 # Install using pip install -r requirements.pip
 
-lxml
 argparse
 babel==1.3
-
+lxml
+ordereddict
