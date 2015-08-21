@@ -2,5 +2,5 @@
 
 lxml
 argparse
-babel
+babel==1.3
 
