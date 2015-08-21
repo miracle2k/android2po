@@ -1,9 +1,21 @@
 language: python
-cache: pip
+
+cache:
+  pip: true
+  directories:
+  - .tox
+  - $HOME/.cache/pip
+
 sudo: false
-python:
-  - "2.7"
-# command to install dependencies
-install: "pip install -r requirements.pip"
-# command to run tests
-script: nosetests
+
+env:
+- TOXENV=py27
+- TOXENV=py33
+- TOXENV=py34
+- TOXENV=pypy
+- TOXENV=cover
+
+install:
+- pip install tox
+
+script: tox

@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import os
 import re
@@ -56,7 +57,7 @@ class Language(object):
         self.locale = Locale.parse(code) if code else None
 
     def __unicode__(self):
-        return unicode(self.code)
+        return str(self.code)
 
     def xml(self, kind):
         # Android uses a special language code format for the region part
@@ -97,7 +98,7 @@ class DefaultLanguage(Language):
         super(DefaultLanguage, self).__init__(None, env)
 
     def __unicode__(self):
-        return u'<def>'
+        return '<def>'
 
     def xml(self, kind):
         return self.env.path(self.env.resource_dir, 'values/%s.xml' % kind)
@@ -134,7 +135,7 @@ def find_project_dir_and_config():
 
     Returns a 2-tuple (project_dir, config_file).
     """
-    cur = os.getcwdu()
+    cur = os.getcwd()
 
     while True:
         project_dir = config_file = None
@@ -206,7 +207,7 @@ def find_android_kinds(resource_dir, get_all=False):
             else:
                 try:
                     strings = read_xml(filename)
-                except InvalidResourceError, e:
+                except InvalidResourceError as e:
                     raise EnvironmentError('Failed to parse "%s": %s' % (filename, e))
                 else:
                     # If there are any strings in the file, detect as

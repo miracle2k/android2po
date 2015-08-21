@@ -3,7 +3,8 @@
 
 from __future__ import unicode_literals
 
-from StringIO import StringIO
+
+from io import StringIO
 from babel.messages.catalog import Catalog
 from android2po import xml2po, po2xml, read_xml
 from android2po.env import Language

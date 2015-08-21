@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import os, sys, re, uuid, locale
 import codecs
@@ -56,7 +57,7 @@ def file_md5(filename):
         f.close()
 
 
-class Path(unicode):
+class Path(str):
     """Helper representing a filesystem path that can be "bound" to a base
     path. You can then ask it to render as a relative path to that base.
     """
@@ -67,7 +68,7 @@ class Path(unicode):
             raise TypeError()
         self.base = base
         abs = path.normpath(path.abspath(path.join(*parts)))
-        return unicode.__new__(self, abs)
+        return str.__new__(self, abs)
 
     @property
     def rel(self):
@@ -138,7 +139,7 @@ class Writer():
 
     # +2 for [ and ]
     # +1 for additional left padding
-    max_event_len = max([len(k) for k in EVENTS.keys()]) + 2 + 1
+    max_event_len = max([len(k) for k in list(EVENTS.keys())]) + 2 + 1
 
     class Action(dict):
         def __init__(self, writer, *more, **data):
@@ -329,6 +330,6 @@ class Writer():
 
     def _print_message(self, message, severity):
         style = self._get_style_for_level(severity)
-        self.stdout.write(colored(" "*(self.max_event_len+1) + u"- %s" % message,
+        self.stdout.write(colored(" "*(self.max_event_len+1) + "- %s" % message,
                           **style))
         self.stdout.write("\n")

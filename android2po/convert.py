@@ -11,9 +11,11 @@ The process thus is:
 
 """
 
+from __future__ import unicode_literals
+
 from itertools import chain
 from collections import namedtuple
-from compat import OrderedDict
+from .compat import OrderedDict
 from lxml import etree
 from babel.messages import Catalog
 from babel.plural import _plural_tags as PLURAL_TAGS
@@ -208,14 +210,14 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                         max_slice = min(i+5, len(text)-1)
                         codepoint_str = "".join(text[i+1 : max_slice])
                         if len(codepoint_str) < 4:
-                            codepoint_str = u"0" * (4-len(codepoint_str)) + codepoint_str
-                        print repr(codepoint_str)
+                            codepoint_str = "0" * (4-len(codepoint_str)) + codepoint_str
+                        print(repr(codepoint_str))
                         try:
                             # We can't trust int() to raise a ValueError,
                             # it will ignore leading/trailing whitespace.
                             if not codepoint_str.isalnum():
                                 raise ValueError(codepoint_str)
-                            codepoint = unichr(int(codepoint_str, 16))
+                            codepoint = chr(int(codepoint_str, 16))
                         except ValueError:
                             raise UnsupportedResourceError('bad unicode escape sequence')
 
@@ -259,7 +261,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
     # XML (including entities), *except* tags. Much more than that
     # though, the processing rules the Android xml format needs
     # require custom processing anyway.
-    value = u""
+    value = ""
     formatted = False
     for ev, elem  in etree.iterwalk(tag, events=('start', 'end',)):
         is_root = elem == tag
@@ -273,12 +275,12 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                 # TODO: We are currently not dealing correctly with
                 # attribute values that need escaping.
                 tag_name, to_declare = get_tag_name(elem)
-                params = ["%s=\"%s\"" % (k, v) for k, v in elem.attrib.items()]
+                params = ["%s=\"%s\"" % (k, v) for k, v in list(elem.attrib.items())]
                 if to_declare:
                     name, url = to_declare
                     params.append('xmlns:%s="%s"' % (name, url))
                 params_str = " %s" % " ".join(params) if params else ""
-                value += u"<%s%s>" % (tag_name, params_str)
+                value += "<%s%s>" % (tag_name, params_str)
             if elem.text is not None:
                 t = elem.text
                 # Leading/Trailing whitespace is removed completely
@@ -311,7 +313,7 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
             # The closing root tag has no info for us at all.
             if not is_root:
                 tag_name, _ = get_tag_name(elem)
-                value += u"</%s>" % tag_name
+                value += "</%s>" % tag_name
                 if elem.tail is not None:
                     converted_value, elem_formatted = convert_text(elem.tail)
                     if elem_formatted:
@@ -322,12 +324,12 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
     # not sure if this is a general gettext limitation, but it's not
     # unlikely that other tools would have problems, so it's for the better
     # in any case.
-    if value == u'':
+    if value == '':
         raise UnsupportedResourceError('empty resources not supported')
     return value, formatted
 
 
-def read_xml(file, language=None, warnfunc=dummy_warn):
+def read_xml(xml_file, language=None, warnfunc=dummy_warn):
     """Load all resource names from an Android strings.xml resource file.
 
     The result is a ``ResourceTree`` instance.
@@ -336,8 +338,8 @@ def read_xml(file, language=None, warnfunc=dummy_warn):
     comment = []
 
     try:
-        doc = etree.parse(file)
-    except etree.XMLSyntaxError, e:
+        doc = etree.parse(xml_file)
+    except etree.XMLSyntaxError as e:
         raise InvalidResourceError(e)
 
     for tag in doc.getroot():
@@ -364,7 +366,7 @@ def read_xml(file, language=None, warnfunc=dummy_warn):
         if tag.tag == 'string':
             try:
                 text, formatted = get_element_text(tag, name, warnfunc)
-            except UnsupportedResourceError, e:
+            except UnsupportedResourceError as e:
                 warnfunc('"%s" has been skipped, reason: %s' % (
                     name, e.reason), 'info')
             else:
@@ -376,7 +378,7 @@ def read_xml(file, language=None, warnfunc=dummy_warn):
             for child in tag.findall('item'):
                 try:
                     text, formatted = get_element_text(child, name, warnfunc)
-                except UnsupportedResourceError, e:
+                except UnsupportedResourceError as e:
                     # XXX: We currently can't handle this, because even if
                     # we write out a .po file with the proper array
                     # indices, and items like this one missing, during
@@ -412,7 +414,7 @@ def read_xml(file, language=None, warnfunc=dummy_warn):
                 else:
                     try:
                         text, formatted = get_element_text(child, name, warnfunc)
-                    except UnsupportedResourceError, e:
+                    except UnsupportedResourceError as e:
                         warnfunc(('Warning: The plural "%s" can\'t '+
                                   'be processed (reason: %s) - '
                                   'the plural will be incomplete') %
@@ -466,7 +468,7 @@ def set_catalog_plural_forms(catalog, language):
         pass
 
 
-def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
+def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
     """Return ``resources`` as a Babel .po ``Catalog`` instance.
 
     If given, ``translations`` will be used for the translated values.
@@ -495,8 +497,8 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
         # See http://babel.edgewall.org/ticket/290.
         set_catalog_plural_forms(catalog, translations.language)
 
-    for name, org_value in resources.iteritems():
-        if filter and filter(name):
+    for name, org_value in resources.items():
+        if resfilter and resfilter(name):
             continue
 
         trans_value = None
@@ -517,7 +519,7 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
                 trans_value = StringArray()
 
             for index, item in enumerate(org_value):
-                item_trans = trans_value[index].text if index < len(trans_value) else u''
+                item_trans = trans_value[index].text if index < len(trans_value) else ''
 
                 # If the string has formatting markers, indicate it in
                 # the gettext output
@@ -551,7 +553,7 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
             # plural strings into one.
             formatted = False
             comments = []
-            for _, translation in org_value.items():
+            for _, translation in list(org_value.items()):
                 if translation.formatted:
                     formatted = True
                 comments.extend(translation.comments)
@@ -562,10 +564,10 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
             singular =\
                 temp.pop('one') if 'one' in temp else\
                 temp.pop('other') if 'other' in temp else\
-                temp.pop(temp.keys()[0])
+                temp.pop(list(temp.keys())[0])
             plural =\
                 temp.pop('other') if 'other' in temp else\
-                temp[temp.keys()[0]] if temp else\
+                temp[list(temp.keys())[0]] if temp else\
                 singular
             msgid = (singular.text, plural.text)
             del temp, singular, plural
@@ -576,7 +578,7 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
             if trans_value:
                 allowed_keywords = translations.language.plural_keywords
                 msgstr = ['' for i in range(len(allowed_keywords))]
-                for quantity, translation in trans_value.items():
+                for quantity, translation in list(trans_value.items()):
                     try:
                         index = translations.language.plural_keywords.index(quantity)
                     except ValueError:
@@ -605,13 +607,13 @@ def xml2po(resources, translations=None, filter=None, warnfunc=dummy_warn):
             if org_value.formatted:
                 flags.append('c-format')
 
-            catalog.add(org_value.text, trans_value.text if trans_value else u'',
+            catalog.add(org_value.text, trans_value.text if trans_value else '',
                         flags=flags, auto_comments=org_value.comments, context=name)
 
     if translations is not None:
         # At this point, trans_strings only contains those for which
         # no original existed.
-        return catalog, translations.keys()
+        return catalog, list(translations.keys())
     else:
         return catalog
 
@@ -663,11 +665,11 @@ def write_to_dom(elem_name, value, ref, namespaces=None, warnfunc=dummy_warn):
     # (https://answers.launchpad.net/lxml/+question/111660).
     # So we use a wrapping element with xmlns attributes that we ignore
     # after parsing.
-    namespace_text = " ".join(['xmlns:%s="%s"' % (prefix, ns) for ns, prefix in KNOWN_NAMESPACES.items()])
+    namespace_text = " ".join(['xmlns:%s="%s"' % (prefix, ns) for ns, prefix in list(KNOWN_NAMESPACES.items())])
     value_to_parse = "<root %s><%s>%s</%s></root>" % (namespace_text, elem_name, value, elem_name)
     try:
         elem = etree.fromstring(value_to_parse)
-    except etree.XMLSyntaxError, e:
+    except etree.XMLSyntaxError as e:
         elem = etree.fromstring(value_to_parse, loose_parser)
         warnfunc(('%s contains invalid XHTML (%s); Falling back to '
                   'loose parser.') % (ref, e), 'warning')
@@ -737,14 +739,13 @@ def write_to_dom(elem_name, value, ref, namespaces=None, warnfunc=dummy_warn):
 
     return elem
 
-def sort_plural_keywords(x, y):
-    """Comparator that sorts CLDR  plural keywords starting with 'zero'
+def key_plural_keywords(x):
+    """Extracts CLDR plural keywords index starting with 'zero'
     and ending with 'other'."""
-    return cmp(PLURAL_TAGS.index(x) if x in PLURAL_TAGS else -1,
-               PLURAL_TAGS.index(y) if y in PLURAL_TAGS else -1)
+    return PLURAL_TAGS.index(x) if x in PLURAL_TAGS else -1
 
 
-def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
+def po2xml(catalog, with_untranslated=False, resfilter=None, warnfunc=dummy_warn):
     """Convert the gettext catalog in ``catalog`` to a ``ResourceTree``
     instance (our in-memory representation of an Android XML resource)
 
@@ -794,7 +795,7 @@ def po2xml(catalog, with_untranslated=False, filter=None, warnfunc=dummy_warn):
                       'catalog.') % message.id, 'error')
             continue
 
-        if filter and filter(message):
+        if resfilter and resfilter(message):
             continue
 
         # Both string and id will contain a tuple of this is a plural
@@ -859,7 +860,7 @@ def write_xml(tree, warnfunc=dummy_warn):
     # Convert the xml tree we've built into an actual Android XML DOM.
     root_tags = []
     namespaces_used = {}
-    for name, value in tree.iteritems():
+    for name, value in tree.items():
         if isinstance(value, StringArray):
             # string-array - first, sort by index
             array_el = etree.Element('string-array')
@@ -874,7 +875,7 @@ def write_xml(tree, warnfunc=dummy_warn):
             # plurals
             plural_el = etree.Element('plurals')
             plural_el.attrib['name'] = name
-            for k in sorted(value, cmp=sort_plural_keywords):
+            for k in sorted(value, key=key_plural_keywords):
                 item_el = write_to_dom(
                     'item', value[k], '"%s" quantity %s' % (name, k),
                     namespaces_used, warnfunc)
