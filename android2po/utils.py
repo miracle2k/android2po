@@ -8,8 +8,7 @@ try:
 except ImportError:
    import md5
 from os import path
-
-from .termcolors import colored
+from termcolor import colored
 
 
 __all__ = ('Path', 'Writer', 'file_md5', 'format_to_re',)
@@ -273,10 +272,10 @@ class Writer():
         # Other colors that work moderately well on both dark and
         # light backgrounds and aren't yet used: cyan, green
         return {
-            'default': {'fg': 'blue'},
+            'default': {'color': 'blue'},
             'info': {},
-            'warning': {'fg': 'magenta'},
-            'error': {'fg': 'red'},
+            'warning': {'color': 'magenta'},
+            'error': {'color': 'red'},
         }.get(severity, {})
 
     def get_style_for_action(self, action):
@@ -321,11 +320,9 @@ class Writer():
         tag = "[%s]" % action['event']
 
         style = self.get_style_for_action(action)
-        self.stdout.write(colored("%*s" % (self.max_event_len, tag), opts=('bold',), **style))
-        self.stdout.write(colored(opts=('noreset',), **style))
+        self.stdout.write(colored("%*s" % (self.max_event_len, tag), attrs=['bold',], **style))
         self.stdout.write(" ")
-        self.stdout.write(text)
-        self.stdout.write(colored())
+        self.stdout.write(colored(text, **style))
         self.stdout.write("\n")
 
     def _print_message(self, message, severity):

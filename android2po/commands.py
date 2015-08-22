@@ -8,10 +8,10 @@ except ImportError:
     from io import BytesIO
 from lxml import etree
 from babel.messages import pofile, Catalog
+from termcolor import colored
 
 from . import convert
 from .env import resolve_locale
-from .termcolors import colored
 
 
 __all__ = ('CommandError', 'ExportCommand', 'ImportCommand', 'InitCommand',)
@@ -524,7 +524,7 @@ class ExportCommand(InitCommand):
             print(colored("Warning: One or more .po files were skipped "+\
                   "because they did not exist yet. Use the 'init' command "+\
                   "to generate them for the first time.",
-                  fg='magenta', opts=('bold',)))
+                  color='magenta', attrs=['bold',]))
 
 
 class ImportCommand(Command):

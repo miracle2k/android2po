@@ -4,3 +4,4 @@ argparse
 babel==1.3
 lxml
 ordereddict
+termcolor
