@@ -15,6 +15,15 @@ from android2po.convert import StringArray
 from .helpers import ProgramTest
 
 
+class TestInit(ProgramTest):
+
+    def test_init_with_nondefault_strings(self):
+        p = self.setup_project()
+        p.write_xml(data={'s1': 'foo'})
+        p.write_xml(data={'s1': 'bar', 'de_only': 'no_default'}, lang='de')
+        assert 'de_only' in p.program('init', {'-v': ''})
+
+
 class TestExport(ProgramTest):
 
     def test_export_with_empty_master_xml(self):
