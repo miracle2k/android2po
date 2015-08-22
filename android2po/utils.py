@@ -285,7 +285,7 @@ class Writer():
         try:
             return {
                 'info': {},   # alyways render info in default
-                'exists': {'fg': 'blue'}
+                'exists': {'color': 'blue'}
             }[action.event]
         except KeyError:
             return self._get_style_for_level(action.severity)
