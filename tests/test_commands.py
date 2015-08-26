@@ -12,7 +12,16 @@ right thing.
 from nose.tools import assert_raises
 from babel.messages import Catalog
 from android2po.convert import StringArray
-from helpers import ProgramTest
+from .helpers import ProgramTest
+
+
+class TestInit(ProgramTest):
+
+    def test_init_with_nondefault_strings(self):
+        p = self.setup_project()
+        p.write_xml(data={'s1': 'foo'})
+        p.write_xml(data={'s1': 'bar', 'de_only': 'no_default'}, lang='de')
+        assert 'de_only' in p.program('init', {'-v': ''})
 
 
 class TestExport(ProgramTest):
@@ -24,6 +33,11 @@ class TestExport(ProgramTest):
         p.write_xml(data="""<resources></resources>""", lang='de')
         p.write_po(Catalog('de'))
         assert not '[failed]' in p.program('export')
+
+    def test_export_with_non_existent_po(self):
+        p = self.setup_project()
+        p.write_xml(data="""<resources></resources>""", lang='de')
+        assert '[skipped]' in p.program('export', {'de': ''})
 
 
 class TestImport(ProgramTest):

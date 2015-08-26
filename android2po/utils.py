@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import os, sys, re, uuid, locale
 import codecs
@@ -7,8 +8,7 @@ try:
 except ImportError:
    import md5
 from os import path
-
-from .termcolors import colored
+from termcolor import colored
 
 
 __all__ = ('Path', 'Writer', 'file_md5', 'format_to_re',)
@@ -56,7 +56,7 @@ def file_md5(filename):
         f.close()
 
 
-class Path(unicode):
+class Path(str):
     """Helper representing a filesystem path that can be "bound" to a base
     path. You can then ask it to render as a relative path to that base.
     """
@@ -67,7 +67,7 @@ class Path(unicode):
             raise TypeError()
         self.base = base
         abs = path.normpath(path.abspath(path.join(*parts)))
-        return unicode.__new__(self, abs)
+        return str.__new__(self, abs)
 
     @property
     def rel(self):
@@ -138,7 +138,7 @@ class Writer():
 
     # +2 for [ and ]
     # +1 for additional left padding
-    max_event_len = max([len(k) for k in EVENTS.keys()]) + 2 + 1
+    max_event_len = max([len(k) for k in list(EVENTS.keys())]) + 2 + 1
 
     class Action(dict):
         def __init__(self, writer, *more, **data):
@@ -272,10 +272,10 @@ class Writer():
         # Other colors that work moderately well on both dark and
         # light backgrounds and aren't yet used: cyan, green
         return {
-            'default': {'fg': 'blue'},
+            'default': {'color': 'blue'},
             'info': {},
-            'warning': {'fg': 'magenta'},
-            'error': {'fg': 'red'},
+            'warning': {'color': 'magenta'},
+            'error': {'color': 'red'},
         }.get(severity, {})
 
     def get_style_for_action(self, action):
@@ -285,7 +285,7 @@ class Writer():
         try:
             return {
                 'info': {},   # alyways render info in default
-                'exists': {'fg': 'blue'}
+                'exists': {'color': 'blue'}
             }[action.event]
         except KeyError:
             return self._get_style_for_level(action.severity)
@@ -320,15 +320,13 @@ class Writer():
         tag = "[%s]" % action['event']
 
         style = self.get_style_for_action(action)
-        self.stdout.write(colored("%*s" % (self.max_event_len, tag), opts=('bold',), **style))
-        self.stdout.write(colored(opts=('noreset',), **style))
+        self.stdout.write(colored("%*s" % (self.max_event_len, tag), attrs=['bold',], **style))
         self.stdout.write(" ")
-        self.stdout.write(text)
-        self.stdout.write(colored())
+        self.stdout.write(colored(text, **style))
         self.stdout.write("\n")
 
     def _print_message(self, message, severity):
         style = self._get_style_for_level(severity)
-        self.stdout.write(colored(" "*(self.max_event_len+1) + u"- %s" % message,
+        self.stdout.write(colored(" "*(self.max_event_len+1) + "- %s" % message,
                           **style))
         self.stdout.write("\n")

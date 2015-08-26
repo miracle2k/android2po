@@ -1,7 +1,9 @@
 """Test reading and parsing the configuration file.
 """
 
-from StringIO import StringIO
+from __future__ import unicode_literals
+
+from io import StringIO
 from nose.tools import assert_raises
 from android2po.program import read_config, CommandError
 
@@ -35,9 +37,15 @@ def test_whitespace():
 def test_path_rebase():
     """Paths in the config file are made relative to their location.
     """
-    file = StringIO('''--gettext ../gettext\n--android ../res''')
-    file.name = '/opt/proj/android/shared/.config'
+    # In Python 2.6, you can't set StringIO object's name attribute, so this
+    # allows us to mock an opened file in 2.6+.
+    class MockFile(StringIO):
+        name = None
+        def __init__(self, name, buffer_=None):
+            super(MockFile, self).__init__(buffer_)
+            self.name = name
+    file = MockFile('/opt/proj/android/shared/.config', '''--gettext ../gettext\n--android ../res''')
     c = read_config(file)
-    print c.gettext_dir
+    print(c.gettext_dir)
     assert c.gettext_dir == '/opt/proj/android/gettext'
     assert c.resource_dir == '/opt/proj/android/res'

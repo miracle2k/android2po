@@ -1,5 +1,7 @@
 # Install using pip install -r requirements.pip
 
+argparse
+babel==1.3
 lxml
-argparse==1.1
-babel >= 1.0
+ordereddict
+termcolor

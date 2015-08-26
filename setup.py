@@ -3,7 +3,7 @@
 """Adapted from virtualenv's setup.py
 """
 
-import sys, os
+import os
 try:
     from setuptools import setup
     kw = {'entry_points':
@@ -24,7 +24,7 @@ version = None
 for line in fp:
     match = version_re.search(line)
     if match:
-        exec "version = %s" % match.group(1)
+        exec("version = %s" % match.group(1))
         version = ".".join(map(str, version))
         break
 else:
@@ -45,9 +45,6 @@ setup(name='android2po',
       license='BSD',
       packages=['android2po'],
       package_dir = {'android2po': 'android2po'},
-      install_requires = ['lxml', 'argparse==1.1', 'babel==1.0dev'],
-      dependency_links = [
-          "http://elsdoerfer.name/download/android2po/files/Babel-1.0dev.tar.gz"
-      ],
+      install_requires = ['lxml', 'argparse', 'babel'],
       **kw
       )

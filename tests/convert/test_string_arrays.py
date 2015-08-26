@@ -2,9 +2,10 @@
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 from android2po import xml2po, po2xml, read_xml
-from StringIO import StringIO
+from io import StringIO
 from lxml import etree
 from babel.messages.catalog import Catalog
 from ..helpers import TestWarnFunc

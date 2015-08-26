@@ -1,0 +1,22 @@
+language: python
+
+cache:
+  pip: true
+  directories:
+  - .tox
+  - $HOME/.cache/pip
+
+sudo: false
+
+env:
+- TOXENV=py26
+- TOXENV=py27
+- TOXENV=py33
+- TOXENV=py34
+- TOXENV=pypy
+- TOXENV=cover
+
+install:
+- pip install tox
+
+script: tox

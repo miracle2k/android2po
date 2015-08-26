@@ -88,6 +88,22 @@ class Config(object):
          'dest': 'layout',
          'default': 'default',
         },
+        {
+            'name': 'enable-fuzzy-matching',
+            'help': 'enable fuzzy matching during export command. When it is enabled ' +
+                    'android2po will automatically add translations for new strings. ' +
+                    'by default this behaviour is turned off',
+            'dest': 'enable_fuzzy_matching',
+            'default': False,
+            'kwargs': {'action': 'store_true', }
+        },
+        {
+            'name': 'clear-obsolete',
+            'help': 'during export do not add obsolete strings to the generated .po files',
+            'dest': 'clear_obsolete',
+            'default': True,
+            'kwargs': {'action': 'store_true', }
+        }
     )
 
     def __init__(self):

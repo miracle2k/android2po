@@ -1,16 +1,17 @@
 from __future__ import absolute_import
 
 import os
+import collections
 try:
-    import cStringIO as StringIO
+    from cStringIO import StringIO as BytesIO
 except ImportError:
-    import StringIO
+    from io import BytesIO
 from lxml import etree
 from babel.messages import pofile, Catalog
+from termcolor import colored
 
 from . import convert
 from .env import resolve_locale
-from .termcolors import colored
 
 
 __all__ = ('CommandError', 'ExportCommand', 'ImportCommand', 'InitCommand',)
@@ -23,11 +24,11 @@ class CommandError(Exception):
 def read_catalog(filename, **kwargs):
     """Helper to read a catalog from a .po file.
     """
-    file = open(filename, 'rb')
+    f = open(filename, 'r')
     try:
-        return pofile.read_po(file, **kwargs)
+        return pofile.read_po(f, **kwargs)
     finally:
-        file.close()
+        f.close()
 
 
 def catalog2string(catalog, **kwargs):
@@ -35,9 +36,9 @@ def catalog2string(catalog, **kwargs):
 
     This is a simple shortcut around pofile.write_po().
     """
-    sf = StringIO.StringIO()
+    sf = BytesIO()
     pofile.write_po(sf, catalog, **kwargs)
-    return sf.getvalue()
+    return sf.getvalue().decode('utf-8')
 
 
 def xml2string(tree, action):
@@ -49,7 +50,7 @@ def xml2string(tree, action):
     ENCODING = 'utf-8'
     dom = convert.write_xml(tree, warnfunc=action.message)
     return etree.tostring(dom, xml_declaration=True,
-                          encoding=ENCODING, pretty_print=True)
+                          encoding=ENCODING, pretty_print=True).decode('utf-8')
 
 
 def read_xml(action, filename, **kw):
@@ -60,7 +61,7 @@ def read_xml(action, filename, **kw):
     """
     try:
         return convert.read_xml(filename, warnfunc=action.message, **kw)
-    except convert.InvalidResourceError, e:
+    except convert.InvalidResourceError as e:
         action.done('failed')
         action.message('Failed parsing "%s": %s' % (filename.rel, e), 'error')
         return False
@@ -74,7 +75,7 @@ def xml2po(env, action, *a, **kw):
         for filter in env.config.ignores:
             if filter.match(name):
                 return True
-    kw['filter'] = xml_filter
+    kw['resfilter'] = xml_filter
     if action:
         kw['warnfunc'] = action.message
     return convert.xml2po(*a, **kw)
@@ -87,7 +88,7 @@ def po2xml(env, action, *a, **kw):
     def po_filter(message):
         if env.config.ignore_fuzzy and message.fuzzy:
             return True
-    kw['filter'] = po_filter
+    kw['resfilter'] = po_filter
     kw['warnfunc'] = action.message
     return convert.po2xml(*a, **kw)
 
@@ -113,7 +114,7 @@ def list_languages(source, env, writer):
     assert source in ('gettext', 'android')
     languages = getattr(env,
         'get_gettext_languages' if source=='gettext' else 'get_android_languages')()
-    lstr = ", ".join(map(unicode, languages))
+    lstr = ", ".join(map(str, languages))
     writer.action('info',
                   "Found %d language(s): %s" % (len(languages), lstr))
     writer.message('List of languages was based on %s' % (
@@ -176,9 +177,9 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     ensure_directories(cmd, filename.dir)
 
-    f = open(filename, 'wb')
+    f = open(filename, 'w')
     try:
-        if callable(content):
+        if isinstance(content, collections.Callable):
             content = content()
         f.write(content)
         f.flush()
@@ -486,7 +487,22 @@ class ExportCommand(InitCommand):
                 if catalog is None:
                     # Something went wrong parsing the catalog
                     continue
-                lang_catalog.update(catalog)
+                lang_catalog.update(catalog,
+                                    no_fuzzy_matching=not env.config.enable_fuzzy_matching)
+
+                # Making monkey patching: getting values from obsolete values and
+                # setting them as the new ones while marking message fuzzy
+                for message in lang_catalog:
+                    for key in lang_catalog.obsolete:
+                        if key == "":
+                            continue
+                        if message.context == key[1]:
+                            obsolete_message = lang_catalog.obsolete[key]
+                            message.string = obsolete_message.string
+                            message.flags.add('fuzzy')
+                # Clearing obsolete messages
+                if env.config.clear_obsolete:
+                    lang_catalog.obsolete.clear()
 
                 # Set the correct plural forms.
                 current_plurals = lang_catalog.plural_forms
@@ -504,11 +520,11 @@ class ExportCommand(InitCommand):
                            action=action)
 
         if initial_warning:
-            print ""
-            print colored("Warning: One or more .po files were skipped "+\
+            print("")
+            print(colored("Warning: One or more .po files were skipped "+\
                   "because they did not exist yet. Use the 'init' command "+\
                   "to generate them for the first time.",
-                  fg='magenta', opts=('bold',))
+                  color='magenta', attrs=['bold',]))
 
 
 class ImportCommand(Command):
@@ -553,6 +569,7 @@ class ImportCommand(Command):
         # were skipped.
         for kind in self.env.xmlfiles:
             language_xml = language.xml(kind)
+            language_po = language.po(kind)
             action = self.w.begin(language_xml)
 
             if skip_due_to_incomplete:

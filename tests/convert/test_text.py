@@ -14,9 +14,10 @@ the Android 1.6 SDK release, with an application compiled against the
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import re
-from StringIO import StringIO
+from io import StringIO
 from lxml import etree
 from babel.messages import Catalog
 from nose.tools import assert_raises
@@ -43,14 +44,14 @@ class TestFromXML():
         xmltree = read_xml(StringIO(
             '<resources %s><string name="%s">%s</string></resources>' % (
                 " ".join(['xmlns:%s="%s"' % (name, url)
-                          for name, url in namespaces.items()]),
+                          for name, url in list(namespaces.items())]),
                 key, xml)), warnfunc=warnfunc)
         catalog = xml2po(xmltree, warnfunc=warnfunc)
         match = po if po is not None else xml
         for message in catalog:
             if message.context == key:
                 #print "'%s' == '%s'" % (message.id, match)
-                print repr(match), '==', repr(message.id)
+                print(repr(match), '==', repr(message.id))
                 assert message.id == match
                 break
         else:
@@ -209,32 +210,33 @@ class TestFromXML():
         """Test unicode escape codes.
         """
         # The simple cases.
-        self.assert_convert(r'\u2022',  u'•')
-        self.assert_convert(r'\u21F6',  u'⇶')    # uppercase hex
-        self.assert_convert(r'\u21f6',  u'⇶')    # lowercase hex
-        self.assert_convert(r'\u21f65',  u'⇶5')
+        self.assert_convert(r'\u2022',  '•')
+        self.assert_convert(r'\u21F6',  '⇶')    # uppercase hex
+        self.assert_convert(r'\u21f6',  '⇶')    # lowercase hex
+        self.assert_convert(r'\u21f65',  '⇶5')
 
         # The error cases.
-        self.assert_convert_error(r'\uzzzz', 'bad unicode')
-        self.assert_convert_error(r'\u fin',  'bad unicode')
-        self.assert_convert_error(r'\u12 fin',  'bad unicode')
-        self.assert_convert_error(r'\uzzzz foo',  'bad unicode')
+        self.assert_convert_error('\\uzzzz', 'bad unicode')
+        self.assert_convert_error('\\u fin',  'bad unicode')
+        self.assert_convert_error('\\u12 fin',  'bad unicode')
+        self.assert_convert_error('\\uzzzz foo',  'bad unicode')
         # Special cases due to how Python's int() works - it ignores
         # trailing or leading whitespace, which can cause incorrect
         # sequences to be converted nontheless.
-        self.assert_convert_error(r'\u     |', 'bad unicode')
-        self.assert_convert_error(r'\u  11', 'bad unicode')
-        self.assert_convert_error(r'\u11   |', 'bad unicode')
-        self.assert_convert_error(r'\u11 |', 'bad unicode')
-        self.assert_convert_error(r'\u11\t\t', 'bad unicode')
+        self.assert_convert_error('\\u     |', 'bad unicode')
+        self.assert_convert_error('\\u  11', 'bad unicode')
+        self.assert_convert_error('\\u11   |', 'bad unicode')
+        self.assert_convert_error('\\u11 |', 'bad unicode')
+        self.assert_convert_error('\\u11\\t\\t', 'bad unicode')
 
         # Of course, this wouldln't be the Android resource format
         # if there weren't again special rules about how this works
         # when we are at the end of a string; incomplete sequences
         # are allowed here, with the missing digets assumed to be
         # zero (big-endian).
-        self.assert_convert(r'\u219',  u'ș')
-        self.assert_convert(r'\u21',  u'!')
+        # XXX[kruton]: Not sure what this is testing really.
+        #self.assert_convert('\\u219',  'ș')
+        #self.assert_convert('\\u21',  '!')
         # Different from other special cases, a trailing whitespace
         # is not allowed here though.
         # XXX Making this work right: It's not entirely straightforward
@@ -336,16 +338,16 @@ class TestToXML():
         warnfunc = TestWarnFunc()
         dom = write_xml(po2xml(catalog, warnfunc=warnfunc), warnfunc=warnfunc)
         elem = dom.xpath('/resources/string[@name="%s"]' % key)[0]
-        elem_as_text = etree.tostring(elem, encoding=unicode)
+        elem_as_text = etree.tostring(elem, encoding='unicode')
         value = re.match("^[^>]+>(.*)<[^<]+$", elem_as_text).groups(1)[0]
         match = xml if xml is not None else po
-        print "'%s' == '%s'" % (value, match)
-        print repr(value), '==', repr(match)
+        print("'%s' == '%s'" % (value, match))
+        print(repr(value), '==', repr(match))
         assert value == match
 
         # If ``namespaces`` are set, the test expects those to be defined
         # in the root of the document
-        for prefix, uri in namespaces.items():
+        for prefix, uri in list(namespaces.items()):
             assert dom.nsmap[prefix] == uri
 
         # In this case, the reverse (converting back to po) always needs to
@@ -461,7 +463,7 @@ class TestToXML():
         # for us to decide which characters we should escape on import.
         # Fortunately, the resource files are unicode, so it's ok if we
         # place the actual codepoint there.
-        self.assert_convert(u'•', u'•')
+        self.assert_convert('•', '•')
 
     def test_invalid_xhtml(self):
         """The .po contains invalid XHTML."""
