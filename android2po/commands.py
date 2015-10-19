@@ -181,7 +181,7 @@ def write_file(cmd, filename, content, update=True, action=None,
     try:
         if isinstance(content, collections.Callable):
             content = content()
-        f.write(content)
+        f.write(content.encode('utf-8'))
         f.flush()
     finally:
         f.close()
