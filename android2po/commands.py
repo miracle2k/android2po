@@ -177,7 +177,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     ensure_directories(cmd, filename.dir)
 
-    f = open(filename, 'w')
+    f = open(filename, 'wb')
     try:
         if isinstance(content, collections.Callable):
             content = content()
