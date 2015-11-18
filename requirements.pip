@@ -2,6 +2,6 @@
 
 argparse
 babel==1.3
-lxml
+lxml==3.4.4 # 3.5.0 breaks on pypy currently
 ordereddict
 termcolor
