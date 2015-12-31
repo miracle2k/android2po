@@ -491,13 +491,17 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
     assert not translations or translations.language
 
     catalog = Catalog()
+    can_pluralise = True
     if translations is not None:
         catalog.locale = translations.language.locale
         # We cannot let Babel determine the plural expr for the locale by
         # itself. It will use a custom list of plural expressions rather
         # than generate them based on CLDR.
         # See http://babel.edgewall.org/ticket/290.
-        set_catalog_plural_forms(catalog, translations.language)
+        try:
+            set_catalog_plural_forms(catalog, translations.language)
+        except KeyError:
+            can_pluralise = False
 
     for name, org_value in resources.items():
         if resfilter and resfilter(name):
@@ -534,6 +538,8 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
                             flags=flags, context=ctx)
 
         elif isinstance(org_value, Plurals):
+            if not can_pluralise:
+                continue
             # a plurals, convert to a gettext plurals
             if len(org_value) == 0:
                 warnfunc("Warning: plurals '%s' is empty" % name, 'warning')
