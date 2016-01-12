@@ -8,6 +8,8 @@ from argparse import Namespace
 from os import path
 from babel import Locale
 from babel.core import UnknownLocaleError
+
+from android2po.convert import key_plural_keywords
 from .config import Config
 from .utils import Path, format_to_re
 from .convert import read_xml, InvalidResourceError
@@ -82,8 +84,9 @@ class Language(object):
 
     @property
     def plural_keywords(self):
-        # Use .abstract rather than .rules because latter loses order
-        return [r[0] for r in self.locale.plural_form.abstract] + ['other']
+        # Sort plural rules properly
+        ret = list(self.locale.plural_form.rules.keys()) + ['other']
+        return sorted(ret, key=key_plural_keywords)
 
 
 class DefaultLanguage(Language):
