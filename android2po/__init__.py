@@ -5,7 +5,7 @@ from .convert import *
 from .program import *
 
 
-__version__ = (1, 3, 'dev')
+__version__ = (1, 5, 0)
 
 
 def get_version():

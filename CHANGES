@@ -1,3 +1,9 @@
+1.5.0 (2015-01-14)
+    - Many fixes.
+    - Python 3 support.
+
+    WARNING! Backwards-incompatible change! In the post, the order of the pural forms that android2po expected in .po files was somewhat unspecified. Now, the order [zero, one, two, few, many, other] is used.
+
 1.2.0 (2012-03-18)
     - Support for plurals.
     - Existing languages are now determined based on gettext catalogs,
