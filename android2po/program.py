@@ -14,7 +14,7 @@ if hasattr(argparse, '__version__') and argparse.__version__ < '1.1':  # pragma:
 
 # Resist the temptation to use "*". It won't work on Python 2.5.
 from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
-from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
+from .env import IncompleteEnvironment, EnvironmentError, Environment
 from .config import Config
 from .utils import Writer
 
