@@ -5,7 +5,7 @@ import os, sys, re, uuid, locale
 import codecs
 try:
     from hashlib import md5
-except ImportError:
+except ImportError:  # pragma: no cover
    import md5
 from os import path
 from termcolor import colored

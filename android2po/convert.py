@@ -20,7 +20,7 @@ from babel.messages import Catalog
 from babel.plural import _plural_tags as PLURAL_TAGS
 try:
     from collections import OrderedDict
-except ImportError:
+except ImportError:  # pragma: no cover
     from ordereddict import OrderedDict
 
 __all__ = ('xml2po', 'po2xml', 'read_xml', 'write_xml',

@@ -4,7 +4,7 @@ import os
 import collections
 try:
     from cStringIO import StringIO as BytesIO
-except ImportError:
+except ImportError:  # pragma: no cover
     from io import BytesIO
 from lxml import etree
 from babel.messages import pofile, Catalog

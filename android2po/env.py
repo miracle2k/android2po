@@ -58,7 +58,7 @@ class Language(object):
         self.env = env
         self.locale = Locale.parse(code) if code else None
 
-    def __unicode__(self):
+    def __unicode__(self):  # pragma: no cover
         return str(self.code)
 
     def xml(self, kind):
@@ -100,7 +100,7 @@ class DefaultLanguage(Language):
     def __init__(self, env):
         super(DefaultLanguage, self).__init__(None, env)
 
-    def __unicode__(self):
+    def __unicode__(self):  # pragma: no cover
         return '<def>'
 
     def xml(self, kind):
