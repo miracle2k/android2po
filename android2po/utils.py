@@ -74,7 +74,7 @@ class Path(str):
         """Return this path relative to the base it was bound to.
         """
         base =  self.base or os.getcwd()
-        if not hasattr(path, 'relpath'):
+        if not hasattr(path, 'relpath'):  # pragma: no cover
             # Python < 2.6 doesn't have relpath, and I don't want
             # to bother with a wbole bunch of code for this. See
             # if we can simply remove the prefix, and if not, 2.5
