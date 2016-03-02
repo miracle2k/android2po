@@ -186,7 +186,7 @@ def write_file(cmd, filename, content, update=True, action=None,
     finally:
         f.close()
 
-    if not action is False:
+    if action is not False:
         if old_hash is None:
             action.done('created')
         elif old_hash != filename.hash():

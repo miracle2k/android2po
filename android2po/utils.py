@@ -29,7 +29,7 @@ def format_to_re(format):
     http://stackoverflow.com/questions/2654856/python-convert-format-string-to-regular-expression
     """
     UNIQ = uuid.uuid1().hex
-    assert not UNIQ in format
+    assert UNIQ not in format
     class MarkPlaceholders(dict):
         def __getitem__(self, key):
             return UNIQ+('(?P<%s>.*?)'%key)+UNIQ
