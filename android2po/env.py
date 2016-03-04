@@ -58,7 +58,7 @@ class Language(object):
         self.env = env
         self.locale = Locale.parse(code) if code else None
 
-    def __unicode__(self):
+    def __unicode__(self):  # pragma: no cover
         return str(self.code)
 
     def xml(self, kind):
@@ -100,7 +100,7 @@ class DefaultLanguage(Language):
     def __init__(self, env):
         super(DefaultLanguage, self).__init__(None, env)
 
-    def __unicode__(self):
+    def __unicode__(self):  # pragma: no cover
         return '<def>'
 
     def xml(self, kind):
@@ -402,12 +402,12 @@ class Environment(object):
             # a placeholder would probably be to insert a unique string
             # and see if it comes out at the end; or, come up with
             # a proper regex to parse.
-            if not '%(locale)s' in layout:
+            if '%(locale)s' not in layout:
                 raise EnvironmentError('--layout lacks %(locale)s variable')
-            if self.config.domain and not '%(domain)s' in layout:
+            if self.config.domain and '%(domain)s' not in layout:
                 raise EnvironmentError('--layout needs %(domain)s variable, ',
                                        'since you have set a --domain')
-            if multiple_pos and not '%(group)s' in layout:
+            if multiple_pos and '%(group)s' not in layout:
                 raise EnvironmentError('--layout needs %%(group)s variable, '
                                        'since you have multiple groups: %s' % (
                                            ", ".join(self.xmlfiles)))
@@ -424,7 +424,7 @@ class Environment(object):
                 template = '%(group)s.pot'
             else:
                 template = 'template.pot'
-        elif '%s' in template and not '%(group)s' in template:
+        elif '%s' in template and '%(group)s' not in template:
             # In an earlier version the --template option only
             # supported a %s placeholder for the XML kind. Make
             # sure we still support this.
@@ -438,7 +438,7 @@ class Environment(object):
             # Note that we do not validate %(domain)s here; we expressively
             # allow the user to define a template without a domain.
             # TODO: See the same case above when handling --layout
-            if multiple_pos and not '%(group)s' in template:
+            if multiple_pos and '%(group)s' not in template:
                 raise EnvironmentError('--template needs %%(group)s variable, '
                                        'since you have multiple groups: %s' % (
                                            ", ".join(self.xmlfiles)))
@@ -515,7 +515,7 @@ class Environment(object):
                 if not m:
                     continue
                 code = m.groupdict()['locale']
-                if not code in languages:
+                if code not in languages:
                     language = resolve_locale(code, self)
                     if language:
                         languages[code] = language

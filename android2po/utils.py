@@ -5,7 +5,7 @@ import os, sys, re, uuid, locale
 import codecs
 try:
     from hashlib import md5
-except ImportError:
+except ImportError:  # pragma: no cover
    import md5
 from os import path
 from termcolor import colored
@@ -29,7 +29,7 @@ def format_to_re(format):
     http://stackoverflow.com/questions/2654856/python-convert-format-string-to-regular-expression
     """
     UNIQ = uuid.uuid1().hex
-    assert not UNIQ in format
+    assert UNIQ not in format
     class MarkPlaceholders(dict):
         def __getitem__(self, key):
             return UNIQ+('(?P<%s>.*?)'%key)+UNIQ
@@ -74,7 +74,7 @@ class Path(str):
         """Return this path relative to the base it was bound to.
         """
         base =  self.base or os.getcwd()
-        if not hasattr(path, 'relpath'):
+        if not hasattr(path, 'relpath'):  # pragma: no cover
             # Python < 2.6 doesn't have relpath, and I don't want
             # to bother with a wbole bunch of code for this. See
             # if we can simply remove the prefix, and if not, 2.5

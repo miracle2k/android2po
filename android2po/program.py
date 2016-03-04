@@ -8,13 +8,13 @@ import sys
 from os import path
 
 import argparse
-if hasattr(argparse, '__version__') and argparse.__version__ < '1.1':
-    raise RuntimeError('Needs at least argparse 1.1 to function, you are '+
+if hasattr(argparse, '__version__') and argparse.__version__ < '1.1':  # pragma: no cover
+    raise RuntimeError('Needs at least argparse 1.1 to function, you are ' +
                        'using: %s' % argparse.__version__)
 
 # Resist the temptation to use "*". It won't work on Python 2.5.
 from .commands import InitCommand, ExportCommand, ImportCommand, CommandError
-from .env import IncompleteEnvironment, EnvironmentError, Environment, Language
+from .env import IncompleteEnvironment, EnvironmentError, Environment
 from .config import Config
 from .utils import Writer
 
@@ -221,7 +221,7 @@ def main(argv):
         return 2
 
 
-def run():
+def run():  # pragma: no cover
     """Simplified interface to main().
     """
     sys.exit(main(sys.argv) or 0)
