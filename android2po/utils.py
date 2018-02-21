@@ -217,13 +217,17 @@ class Writer():
         self.verbosity = verbosity
         self.erroneous = False
 
-        # Create a codec writer wrapping stdout
-        isatty = sys.stdout.isatty() \
-            if hasattr(sys.stdout, 'isatty') else False
-        self.stdout = codecs.getwriter(
-            sys.stdout.encoding
-                if isatty
-                else locale.getpreferredencoding())(sys.stdout)
+        # sys.stdout is in text mode by default in Python 3.
+        # Create a codec writer wrapping stdout only for Python 2.
+        if sys.version_info.major < 3:
+            isatty = sys.stdout.isatty() \
+                if hasattr(sys.stdout, 'isatty') else False
+            self.stdout = codecs.getwriter(
+                sys.stdout.encoding
+                    if isatty
+                    else locale.getpreferredencoding())(sys.stdout)
+        else:
+            self.stdout = sys.stdout
 
     def action(self, event, *a, **kw):
         action = Writer.Action(self, *a, **kw)
