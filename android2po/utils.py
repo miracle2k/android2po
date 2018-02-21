@@ -9,7 +9,7 @@ except ImportError:  # pragma: no cover
    import md5
 from os import path
 from termcolor import colored
-
+import colorama
 
 __all__ = ('Path', 'Writer', 'file_md5', 'format_to_re',)
 
@@ -212,6 +212,7 @@ class Writer():
             return sev
 
     def __init__(self, verbosity=LEVELS['default']):
+        colorama.init()
         self._current_action = None
         self._pending_actions = []
         self.verbosity = verbosity
