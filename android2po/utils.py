@@ -9,7 +9,7 @@ except ImportError:  # pragma: no cover
    import md5
 from os import path
 from termcolor import colored
-
+import colorama
 
 __all__ = ('Path', 'Writer', 'file_md5', 'format_to_re',)
 
@@ -212,18 +212,23 @@ class Writer():
             return sev
 
     def __init__(self, verbosity=LEVELS['default']):
+        colorama.init()
         self._current_action = None
         self._pending_actions = []
         self.verbosity = verbosity
         self.erroneous = False
 
-        # Create a codec writer wrapping stdout
-        isatty = sys.stdout.isatty() \
-            if hasattr(sys.stdout, 'isatty') else False
-        self.stdout = codecs.getwriter(
-            sys.stdout.encoding
-                if isatty
-                else locale.getpreferredencoding())(sys.stdout)
+        # sys.stdout is in text mode by default in Python 3.
+        # Create a codec writer wrapping stdout only for Python 2.
+        if sys.version_info.major < 3:
+            isatty = sys.stdout.isatty() \
+                if hasattr(sys.stdout, 'isatty') else False
+            self.stdout = codecs.getwriter(
+                sys.stdout.encoding
+                    if isatty
+                    else locale.getpreferredencoding())(sys.stdout)
+        else:
+            self.stdout = sys.stdout
 
     def action(self, event, *a, **kw):
         action = Writer.Action(self, *a, **kw)

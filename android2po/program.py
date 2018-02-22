@@ -63,8 +63,15 @@ def parse_args(argv):
         group = cmd_parser.add_argument_group('command arguments')
         cmdclass.setup_arg_parser(group)
 
-    return parser.parse_args(argv[1:])
+    options = parser.parse_args(argv[1:])
 
+    # Stop immediately if we are called without any options (as
+    # there is no default command) else return the parsed options.
+    if options.command is None:
+        parser.print_usage()
+        sys.exit(0)
+    else:
+        return options
 
 def read_config(file):
     """Read the config file in ``file``.

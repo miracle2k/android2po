@@ -24,7 +24,7 @@ class CommandError(Exception):
 def read_catalog(filename, **kwargs):
     """Helper to read a catalog from a .po file.
     """
-    f = open(filename, 'r')
+    f = open(filename, 'r', encoding='utf-8')
     try:
         return pofile.read_po(f, **kwargs)
     finally:
