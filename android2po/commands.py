@@ -6,6 +6,7 @@ try:
     from cStringIO import StringIO as BytesIO
 except ImportError:  # pragma: no cover
     from io import BytesIO
+from io import open
 from lxml import etree
 from babel.messages import pofile, Catalog
 from termcolor import colored
