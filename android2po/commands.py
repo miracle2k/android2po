@@ -507,13 +507,18 @@ class ExportCommand(InitCommand):
 
                 # Set the correct plural forms.
                 current_plurals = lang_catalog.plural_forms
-                convert.set_catalog_plural_forms(lang_catalog, language)
-                if lang_catalog.plural_forms != current_plurals:
+                try:
+                    convert.set_catalog_plural_forms(lang_catalog, language)
+                    if lang_catalog.plural_forms != current_plurals:
+                        action.message(
+                            'The Plural-Forms header of this catalog '
+                            'has been updated to what android2po '
+                            'requires for plurals support. See the '
+                            'README for more information.', 'warning')
+                except KeyError:
                     action.message(
                         'The Plural-Forms header of this catalog '
-                        'has been updated to what android2po '
-                        'requires for plurals support. See the '
-                        'README for more information.', 'warning')
+                        'does not exist', 'warning')
 
                 # TODO: Should we include previous?
                 write_file(self, target_po,
