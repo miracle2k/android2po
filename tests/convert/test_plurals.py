@@ -5,6 +5,7 @@
 from __future__ import unicode_literals
 
 from io import StringIO, BytesIO
+from nose.tools import *
 
 from babel.messages.catalog import Catalog
 from android2po import xml2po, po2xml, read_xml
@@ -67,12 +68,12 @@ def test_xml_to_po_conversion_ru_pl():
 
         # message
         msg = list(catalog)[1]
-        assert msg.string == ('loc one', 'loc few', 'loc many', 'loc other')
+        assert_equal(msg.string, ('loc one', 'loc few', 'loc many', 'loc other'))
 
         # translation works properly
         trans = catalog_to_translations(catalog)
         for num, form in mapping[lang].items():
-            assert trans.unpgettext('plurals_test', 'one', 'other', num) == form
+            assert_equal(trans.unpgettext('plurals_test', 'one', 'other', num), form)
 
 
 def test_read_master_xml():
@@ -89,9 +90,9 @@ def test_read_master_xml():
             </plurals>
         </resources>
     ''')
-    assert len(list(catalog)) == 2
-    assert [m.context for m in catalog if m.id] == ['foo']
-    assert [m.id for m in catalog if m.id] == [('bar', 'bars')]
+    assert_equal(len(list(catalog)), 2)
+    assert_equal([m.context for m in catalog if m.id], ['foo'])
+    assert_equal([m.id for m in catalog if m.id], [('bar', 'bars')])
 
 
 def test_read_language_xml():
@@ -123,18 +124,18 @@ def test_read_language_xml():
             warnfunc=wfunc)
 
     # A warning has been written for the unsupported quantity
-    assert len(wfunc.logs) == 1
+    assert_equal(len(wfunc.logs), 1)
     assert 'uses quantity "many", which is not supported ' in wfunc.logs[0]
 
-    assert [m.id for m in catalog if m.id] == [('one', 'other')]
+    assert_equal([m.id for m in catalog if m.id], [('one', 'other')])
     # Note: Romanian does not use the "many" string, so it is not included.
-    assert [m.string for m in catalog if m.id] == [
-        ('ro one', 'ro few', 'ro other')]
+    assert_equal([m.string for m in catalog if m.id], [
+        ('ro one', 'ro few', 'ro other')])
 
     # Make sure the catalog has the proper header
-    assert catalog.num_plurals == 3
+    assert_equal(catalog.num_plurals, 3)
     print(catalog.plural_expr)
-    assert catalog.plural_expr == '(((n == 0) || ((n != 1) && (((n % 100) >= 1 && (n % 100) <= 19)))) ? 1 : (n == 1) ? 0 : 2)'
+    assert_equal(catalog.plural_expr, '((((!((0 == 0))) || ((n == 0))) || ((!((n == 1))) && (((n % 100) >= 1 && (n % 100) <= 19)))) ? 1 : (((n == 1)) && ((0 == 0))) ? 0 : 2)')
 
 
 def test_write():
@@ -144,18 +145,18 @@ def test_write():
     """
     catalog = Catalog()
     catalog.language = Language('bs') # Bosnian
-    catalog.add(('foo', 'foos'), ('one', 'few', 'many', 'other'), context='foo')
-    assert po2xml(catalog) == {'foo': {
-        'few': 'few', 'many': 'many', 'one': 'one', 'other': 'other'}}
+    catalog.add(('foo', 'foos'), ('one', 'few', 'other'), context='foo')
+    assert_equal(po2xml(catalog), {'foo': {
+        'few': 'few', 'one': 'one', 'other': 'other'}})
 
 
 def test_write_incomplete_plural():
     """Test behaviour with incompletely translated plurals in .po."""
     catalog = Catalog()
     catalog.language = Language('bs') # Bosnian
-    catalog.add(('foo', 'foos'), ('one', '', 'many', ''), context='foo')
-    assert po2xml(catalog) == {'foo': {
-        'few': '', 'many': 'many', 'one': 'one', 'other': ''}}
+    catalog.add(('foo', 'foos'), ('one', '', ''), context='foo')
+    assert_equal(po2xml(catalog), {'foo': {
+        'few': '', 'one': 'one', 'other': ''}})
 
 
 def test_write_incorrect_plural():
@@ -164,7 +165,7 @@ def test_write_incorrect_plural():
     """
     catalog = Catalog()
     catalog.language = Language('lt') # Lithuanian
-    # Lithuanian has three plurals, we define 2.
+    # Lithuanian has four plurals, we define 2.
     catalog._num_plurals, catalog._plural_expr = 2, '(n != 1)'
     catalog.add(('foo', 'foos'), ('a', 'b',), context='foo')
 
@@ -172,23 +173,23 @@ def test_write_incorrect_plural():
     xml = po2xml(catalog, warnfunc=wfunc)
 
     # A warning was written
-    assert len(wfunc.logs) == 1
-    assert '2 plurals, we expect 3' in wfunc.logs[0]
+    assert_equal(len(wfunc.logs), 1)
+    assert '2 plurals, we expect 4' in wfunc.logs[0]
 
     # The missing plural is empty
-    assert xml == {'foo': {'one': 'a', 'other': None, 'few': 'b'}}
+    assert_equal(xml, {'foo': {'one': 'a', 'other': None, 'few': 'b', 'many': None}})
 
 
 def test_write_ignore_untranslated_plural():
     """An untranslated plural is not included in the XML.
     """
     catalog = Catalog()
-    catalog.language =  Language('en')
+    catalog.language = Language('en')
     catalog.add(('foo', 'foos'), context='foo')
-    assert po2xml(catalog) == {}
+    assert_equal(po2xml(catalog), {})
 
     # Even with ``with_untranslated``, we still do not include
     # empty plural (they would just block access to the untranslated
     # master version, which we cannot copy into the target).
-    assert po2xml(catalog) == {}
+    assert_equal(po2xml(catalog), {})
 
