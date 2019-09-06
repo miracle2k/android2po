@@ -276,7 +276,7 @@ class InitCommand(Command):
             # Note that this is always rendered with "ignore_exists",
             # i.e. we only log this action if we change the template.
             if write_file(self, template_pot,
-                          content=lambda: catalog2string(template_catalog),
+                          content=lambda: catalog2string(template_catalog, width=self.env.config.width),
                           action=action, ignore_exists=True, update=update):
                 something_written = True
 
@@ -332,7 +332,7 @@ class InitCommand(Command):
                                'without translations')
                 lang_catalog = xml2po(self.env, action, default_data)
 
-            catalog = catalog2string(lang_catalog)
+            catalog = catalog2string(lang_catalog, width=self.env.config.width)
 
             num_total, num_translated, _ = get_catalog_counts(lang_catalog)
             action.message("%d strings processed, %d translated." % (
@@ -517,7 +517,7 @@ class ExportCommand(InitCommand):
 
                 # TODO: Should we include previous?
                 write_file(self, target_po,
-                           catalog2string(lang_catalog, include_previous=False),
+                           catalog2string(lang_catalog, include_previous=False, width=self.env.config.width),
                            action=action)
 
         if initial_warning:
