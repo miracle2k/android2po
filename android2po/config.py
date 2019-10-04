@@ -103,7 +103,15 @@ class Config(object):
             'dest': 'clear_obsolete',
             'default': True,
             'kwargs': {'action': 'store_true', }
-        }
+        },
+        {
+            'name': 'line-width',
+            'help': 'the maximum line width for the generated output; use 0 or a negative number to completely ' +
+                    'disable line wrapping',
+            'dest': 'width',
+            'default': 76,
+            'kwargs': {'metavar': 'N', 'type': int}
+        },
     )
 
     def __init__(self):
