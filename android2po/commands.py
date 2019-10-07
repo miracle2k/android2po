@@ -9,6 +9,7 @@ except ImportError:  # pragma: no cover
 from io import open
 from lxml import etree
 from babel.messages import pofile, Catalog
+#from elementtree import ElementTree
 from termcolor import colored
 
 from . import convert
@@ -50,8 +51,23 @@ def xml2string(tree, action):
     """
     ENCODING = 'utf-8'
     dom = convert.write_xml(tree, warnfunc=action.message)
-    return etree.tostring(dom, xml_declaration=True,
-                          encoding=ENCODING, pretty_print=True).decode('utf-8')
+
+    # By default lxml's pretty print uses 2 spaces to indent. There's no way to
+    # change this without manually adding more spaces line by line.
+    lines = etree.tostring(dom, xml_declaration=True, encoding=ENCODING,
+        pretty_print=True).decode(ENCODING).split("\n")
+
+    for i in range(len(lines)):
+        line = lines[i]
+        new_line = ""
+        for j in range(0, len(line), 2):
+            if line[j:j + 2] == "  ":
+                new_line += "  "
+            else:
+                new_line += line[j:]
+                break
+        lines[i] = new_line
+    return "\n".join(lines)
 
 
 def read_xml(action, filename, **kw):
