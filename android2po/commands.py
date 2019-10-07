@@ -9,7 +9,6 @@ except ImportError:  # pragma: no cover
 from io import open
 from lxml import etree
 from babel.messages import pofile, Catalog
-#from elementtree import ElementTree
 from termcolor import colored
 
 from . import convert
