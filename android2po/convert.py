@@ -336,6 +336,13 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
 
     The result is a ``ResourceTree`` instance.
     """
+
+    def check_formatted(forced_state, detected_state):
+        """If forced_state is not set (None), return detected_state.
+        Otherwise return forced_state (should be True or False).
+        """
+        return detected_state if (forced_state is None) else forced_state
+
     result = ResourceTree(language)
     comment = []
 
@@ -365,6 +372,17 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
             comment = []
             continue
 
+        # Check for the formatted attribute, to override strings which the
+        # developer says definitely do or do not contain format directives.
+        # TODO: add force_fmt as an argument to get_element_text, so we don't
+        # have to compare its result to the flag in every place it is used.
+        force_fmt = None
+        if 'formatted' in tag.attrib:
+            if tag.attrib['formatted'] == 'true':
+                force_fmt = True
+            elif tag.attrib['formatted'] == 'false':
+                force_fmt = False
+
         if tag.tag == 'string':
             try:
                 text, formatted = get_element_text(tag, name, warnfunc)
@@ -372,6 +390,7 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                 warnfunc('"%s" has been skipped, reason: %s' % (
                     name, e.reason), 'info')
             else:
+                formatted = check_formatted(force_fmt, formatted)
                 translation = Translation(text, comment, formatted)
                 result[name] = translation
 
@@ -401,6 +420,7 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                               'the array will be incomplete') %
                                     (name, e.reason), 'warning')
                 else:
+                    formatted = check_formatted(force_fmt, formatted)
                     translation = Translation(text, comment, formatted)
                     result[name].append(translation)
 
@@ -422,6 +442,7 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                                   'the plural will be incomplete') %
                                  (name, e.reason), 'warning')
                     else:
+                        formatted = check_formatted(force_fmt, formatted)
                         translation = Translation(text, comment, formatted)
                         result[name][quantity] = translation
 
