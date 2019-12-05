@@ -213,14 +213,15 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
                         codepoint_str = "".join(text[i+1 : max_slice])
                         if len(codepoint_str) < 4:
                             codepoint_str = "0" * (4-len(codepoint_str)) + codepoint_str
-                        print(repr(codepoint_str))
                         try:
                             # We can't trust int() to raise a ValueError,
                             # it will ignore leading/trailing whitespace.
                             if not codepoint_str.isalnum():
+                                print(repr(codepoint_str))
                                 raise ValueError(codepoint_str)
                             codepoint = chr(int(codepoint_str, 16))
                         except ValueError:
+                            print(repr(codepoint_str))
                             raise UnsupportedResourceError('bad unicode escape sequence')
 
                         text[i-1 : max_slice] = codepoint
