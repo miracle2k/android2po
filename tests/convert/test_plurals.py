@@ -135,7 +135,7 @@ def test_read_language_xml():
     # Make sure the catalog has the proper header
     assert_equal(catalog.num_plurals, 3)
     print(catalog.plural_expr)
-    assert_equal(catalog.plural_expr, '((((!((0 == 0))) || ((n == 0))) || ((!((n == 1))) && (((n % 100) >= 1 && (n % 100) <= 19)))) ? 1 : (((n == 1)) && ((0 == 0))) ? 0 : 2)')
+    assert_equal(catalog.plural_expr, '((((!((0 == 0))) || ((n == 0))) || (((n % 100) >= 2 && (n % 100) <= 19))) ? 1 : (((n == 1)) && ((0 == 0))) ? 0 : 2)')
 
 
 def test_write():
