@@ -217,12 +217,10 @@ def get_element_text(tag, name, warnfunc=dummy_warn, allow_empty=False):
                             # We can't trust int() to raise a ValueError,
                             # it will ignore leading/trailing whitespace.
                             if not codepoint_str.isalnum():
-                                print(repr(codepoint_str))
                                 raise ValueError(codepoint_str)
                             codepoint = chr(int(codepoint_str, 16))
-                        except ValueError:
-                            print(repr(codepoint_str))
-                            raise UnsupportedResourceError('bad unicode escape sequence')
+                        except ValueError as exc:
+                            raise UnsupportedResourceError('bad unicode escape sequence: %s' % exc)
 
                         text[i-1 : max_slice] = codepoint
                         i -= 1
