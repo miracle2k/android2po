@@ -179,7 +179,8 @@ class TestAndroidResourceReferences(Xml2PoTest):
 
 
 def test_empty_resources():
-    """Empty resources are removed and not included in a catalog.
+    """Empty string resources are removed and not included in a catalog.
+       Empty string array items are included to maintain alignment.
     """
     catalog, logs = Xml2PoTest.make('foo', '     ')
     assert len(catalog) == 0
@@ -190,12 +191,13 @@ def test_empty_resources():
             <string-array name="test">
                 <item></item>
                 <item>          </item>
+                <item/>
+                <item>valid string</item>
             </string-array>
         </resources>
     ''')
-    assert len(catalog) == 0
-    assert 'empty' in logs[0]
-    assert 'empty' in logs[1]
+    assert len(catalog) == 4
+    assert po2xml(catalog) == {'test': [None, None, None, 'valid string']}
 
 
 class TestComments:

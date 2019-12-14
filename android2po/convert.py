@@ -74,7 +74,7 @@ class Plurals(dict): pass
 Translation = namedtuple('Translation', ['text', 'comments', 'formatted'])
 
 
-def get_element_text(tag, name, warnfunc=dummy_warn):
+def get_element_text(tag, name, warnfunc=dummy_warn, allow_empty=False):
     """Return a tuple of the contents of the lxml ``element`` with the
     Android specific stuff decoded and whether the text includes
     formatting codes.
@@ -327,7 +327,8 @@ def get_element_text(tag, name, warnfunc=dummy_warn):
     # unlikely that other tools would have problems, so it's for the better
     # in any case.
     if value == '':
-        raise UnsupportedResourceError('empty resources not supported')
+        if not allow_empty:
+            raise UnsupportedResourceError('empty resources not supported')
     return value, formatted
 
 
@@ -398,7 +399,7 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
             result[name] = StringArray()
             for child in tag.findall('item'):
                 try:
-                    text, formatted = get_element_text(child, name, warnfunc)
+                    text, formatted = get_element_text(child, name, warnfunc, allow_empty=True)
                 except UnsupportedResourceError as e:
                     # XXX: We currently can't handle this, because even if
                     # we write out a .po file with the proper array
