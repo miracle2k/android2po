@@ -30,3 +30,8 @@ jobs:
 
     - name: Test with tox
       run: tox
+
+    - uses: actions/upload-artifact@v1
+      with:
+        name: coverage
+        path: cover
