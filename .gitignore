@@ -26,3 +26,4 @@
 
 # nosetests coverage
 /.coverage
+/cover/
