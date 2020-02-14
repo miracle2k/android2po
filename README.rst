@@ -1,11 +1,7 @@
 android2po
 ==========
 
-.. image:: https://travis-ci.org/miracle2k/android2po.svg?branch=master
-  :target: https://travis-ci.org/miracle2k/android2po
-
-.. image:: https://coveralls.io/repos/miracle2k/android2po/badge.svg?branch=master&service=github
-  :target: https://coveralls.io/github/miracle2k/android2po?branch=master
+.. image:: https://github.com/miracle2k/android2po/workflows/Continuous%20integration/badge.svg
 
 Convert Android string resources to gettext .po files, and import them
 right back.
