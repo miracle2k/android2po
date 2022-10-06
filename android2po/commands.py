@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import os
 import collections
+collections.Callable = collections.abc.Callable
 try:
     from cStringIO import StringIO as BytesIO
 except ImportError:  # pragma: no cover
