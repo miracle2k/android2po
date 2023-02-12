@@ -71,7 +71,8 @@ class ResourceTree(OrderedDict):
         self.language = language
 class StringArray(list): pass
 class Plurals(dict): pass
-Translation = namedtuple('Translation', ['text', 'comments', 'formatted'])
+class UnformattedString(str): pass
+Translation = namedtuple('Translation', ['text', 'comments', 'formatted', 'print_false_format'])
 
 
 def get_element_text(tag, name, warnfunc=dummy_warn):
@@ -381,6 +382,8 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                 force_fmt = True
             elif tag.attrib['formatted'] == 'false':
                 force_fmt = False
+            else:
+                warnfunc('%s unrecognized formatted="%s"' % (name, tag.attrib['formatted']), 'warning')
 
         if tag.tag == 'string':
             try:
@@ -390,7 +393,8 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                     name, e.reason), 'info')
             else:
                 formatted = check_formatted(force_fmt, formatted)
-                translation = Translation(text, comment, formatted)
+                force_print_format = (force_fmt != None)
+                translation = Translation(text, comment, formatted, force_print_format)
                 result[name] = translation
 
         elif tag.tag == 'string-array':
@@ -420,7 +424,7 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                                     (name, e.reason), 'warning')
                 else:
                     formatted = check_formatted(force_fmt, formatted)
-                    translation = Translation(text, comment, formatted)
+                    translation = Translation(text, comment, formatted, False)
                     result[name].append(translation)
 
         elif tag.tag == 'plurals':
@@ -442,7 +446,7 @@ def read_xml(xml_file, language=None, warnfunc=dummy_warn):
                                  (name, e.reason), 'warning')
                     else:
                         formatted = check_formatted(force_fmt, formatted)
-                        translation = Translation(text, comment, formatted)
+                        translation = Translation(text, comment, formatted, False)
                         result[name][quantity] = translation
 
         # We now have processed a tag. We either added those comments to
@@ -628,6 +632,8 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
             flags = []
             if org_value.formatted:
                 flags.append('c-format')
+            elif org_value.print_false_format:
+                flags.append('no-c-format')
 
             catalog.add(org_value.text, trans_value.text if trans_value else '',
                         flags=flags, auto_comments=org_value.comments, context=name)
@@ -870,6 +876,9 @@ def po2xml(catalog, with_untranslated=False, resfilter=None, warnfunc=dummy_warn
             if not message.string and not with_untranslated:
                 # Untranslated.
                 continue
+            if message.flags and 'no-c-format' in message.flags:
+                # This sub-class will trigger us to write the string as unformatted
+                value = UnformattedString(value)
             xml_tree[message.context] = value
 
     return xml_tree
@@ -909,6 +918,8 @@ def write_xml(tree, warnfunc=dummy_warn):
             string_el = write_to_dom(
                 'string', value, '"%s"' % name, namespaces_used, warnfunc)
             string_el.attrib['name'] = name
+            if isinstance(value, UnformattedString):
+                string_el.attrib['formatted'] = "false"
             root_tags.append(string_el)
 
     # Generate the root element, define the namespaces that have been
