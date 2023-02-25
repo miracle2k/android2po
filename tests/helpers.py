@@ -59,6 +59,10 @@ class Tee(object):
             else:
                 f.write(data.decode('UTF-8'))
 
+    def flush(self):
+        for f in self.args:
+            f.flush()
+
 
 class TempProject(object):
     """Represents a dummy-Android project in a temporary directory that
