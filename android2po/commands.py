@@ -50,8 +50,10 @@ def xml2string(tree, action):
     """
     ENCODING = 'utf-8'
     dom = convert.write_xml(tree, warnfunc=action.message)
-    return etree.tostring(dom, xml_declaration=True,
-                          encoding=ENCODING, pretty_print=True).decode('utf-8')
+    etree.indent(dom, space="    ")
+    return etree.tostring(dom, xml_declaration=False,
+                          doctype='<?xml version="1.0" encoding="' + ENCODING + '"?>',
+                          encoding=ENCODING, pretty_print=True).decode(ENCODING)
 
 
 def read_xml(action, filename, **kw):
@@ -180,7 +182,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     f = open(filename, 'wb')
     try:
-        if isinstance(content, collections.Callable):
+        if isinstance(content, collections.abc.Callable):
             content = content()
         f.write(content.encode('utf-8'))
         f.flush()
@@ -429,7 +431,7 @@ class InitCommand(Command):
             # This will make us pick up the language on subsequent runs.
             for kind in self.env.xmlfiles:
                 if write_file(self, language.xml(kind),
-                              """<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""",
+                              """<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n</resources>""",
                               update=False, ignore_exists=show_exists):
                     something_done = True
 
