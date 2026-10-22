@@ -98,7 +98,7 @@ def read_config(file):
     else:
         # Open the config file and read the arguments.
         filename = file
-        f = open(file, 'rb')
+        f = open(file, 'r')
         try:
             lines = f.readlines()
         finally:

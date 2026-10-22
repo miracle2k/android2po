@@ -3,6 +3,6 @@
 argparse
 babel>=2.4.0
 colorama
-lxml
+lxml>=4.5
 ordereddict
 termcolor

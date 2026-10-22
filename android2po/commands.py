@@ -42,7 +42,7 @@ def catalog2string(catalog, **kwargs):
     return sf.getvalue().decode('utf-8')
 
 
-def xml2string(tree, action):
+def xml2string(tree, action, indent_str):
     """Helper that returns a ``ResourceTree`` as an XML string.
 
     TODO: It would be cool if this could try to recreate the formatting
@@ -50,8 +50,10 @@ def xml2string(tree, action):
     """
     ENCODING = 'utf-8'
     dom = convert.write_xml(tree, warnfunc=action.message)
-    return etree.tostring(dom, xml_declaration=True,
-                          encoding=ENCODING, pretty_print=True).decode('utf-8')
+    etree.indent(dom, space=indent_str)
+    return etree.tostring(dom, xml_declaration=False,
+                          doctype='<?xml version="1.0" encoding="' + ENCODING + '"?>',
+                          encoding=ENCODING, pretty_print=True).decode(ENCODING)
 
 
 def read_xml(action, filename, **kw):
@@ -180,7 +182,7 @@ def write_file(cmd, filename, content, update=True, action=None,
 
     f = open(filename, 'wb')
     try:
-        if isinstance(content, collections.Callable):
+        if isinstance(content, collections.abc.Callable):
             content = content()
         f.write(content.encode('utf-8'))
         f.flush()
@@ -429,7 +431,7 @@ class InitCommand(Command):
             # This will make us pick up the language on subsequent runs.
             for kind in self.env.xmlfiles:
                 if write_file(self, language.xml(kind),
-                              """<?xml version='1.0' encoding='utf-8'?>\n<resources>\n</resources>""",
+                              """<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n</resources>""",
                               update=False, ignore_exists=show_exists):
                     something_done = True
 
@@ -572,13 +574,14 @@ class ImportCommand(Command):
             language_xml = language.xml(kind)
             language_po = language.po(kind)
             action = self.w.begin(language_xml)
+            indent_str = "\t" if self.env.config.indent_tabs else "    "
 
             if skip_due_to_incomplete:
                 # TODO: Creating a catalog object here is kind of clunky.
                 # Idially, we'd refactor convert.py so that we can use a
                 # dict to represent a resource XML file.
                 xmldata = po2xml(self.env, action, Catalog(locale=language.code))
-                write_file(self, language_xml, xml2string(xmldata, action),
+                write_file(self, language_xml, xml2string(xmldata, action, indent_str),
                            action=False)
                 action.done('skipped', status=('%s catalogs aren\'t '
                                                'complete enough - %.2f done' % (
@@ -591,7 +594,7 @@ class ImportCommand(Command):
                 self.w.message('%s doesn\'t exist' % language_po.rel, 'warning')
                 continue
 
-            content = xml2string(po2xml(self.env, action, catalogs[kind]), action)
+            content = xml2string(po2xml(self.env, action, catalogs[kind]), action, indent_str)
             write_file(self, language_xml, content, action=action)
 
     def execute(self):

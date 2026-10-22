@@ -511,6 +511,7 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
     assert not translations or translations.language
 
     catalog = Catalog()
+    msgid_fmt = 'java-printf-format'
     if translations is not None:
         catalog.locale = translations.language.locale
         # We cannot let Babel determine the plural expr for the locale by
@@ -547,7 +548,7 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
                 # the gettext output
                 flags = []
                 if item.formatted:
-                    flags.append('c-format')
+                    flags.append(msgid_fmt)
 
                 ctx = "%s:%d" % (name, index)
                 catalog.add(item.text, item_trans, auto_comments=item.comments,
@@ -615,7 +616,7 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
 
             flags = []
             if formatted:
-                flags.append('c-format')
+                flags.append(msgid_fmt)
             catalog.add(msgid, tuple(msgstr), flags=flags,
                         auto_comments=comments, context=name)
 
@@ -627,7 +628,7 @@ def xml2po(resources, translations=None, resfilter=None, warnfunc=dummy_warn):
             # TODO DRY this.
             flags = []
             if org_value.formatted:
-                flags.append('c-format')
+                flags.append(msgid_fmt)
 
             catalog.add(org_value.text, trans_value.text if trans_value else '',
                         flags=flags, auto_comments=org_value.comments, context=name)

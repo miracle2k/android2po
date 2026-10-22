@@ -101,7 +101,7 @@ class Config(object):
             'name': 'clear-obsolete',
             'help': 'during export do not add obsolete strings to the generated .po files',
             'dest': 'clear_obsolete',
-            'default': True,
+            'default': False,
             'kwargs': {'action': 'store_true', }
         },
         {
@@ -111,6 +111,13 @@ class Config(object):
             'dest': 'width',
             'default': 76,
             'kwargs': {'metavar': 'N', 'type': int}
+        },
+        {
+            'name': 'indent-tabs',
+            'help': 'use tabs rather than spaces for indentation in the generated XML files',
+            'dest': 'indent_tabs',
+            'default': False,
+            'kwargs': {'action': 'store_true', }
         },
     )
 
